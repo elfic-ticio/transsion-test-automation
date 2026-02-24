@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.Python
+*.egg-info/
+dist/
+build/
+
+# Entorno virtual
+venv/
+env/
+.venv/
+
+# Logs y datos generados
+logs/
+data/
+screenshots/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos Excel privados (si aplica)
+# TestCase_FOTA_Claro_V1.4-CL7s.xlsx

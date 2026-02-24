@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automatizacion de Pruebas Transsion - Homologacion Colombia</title>
+
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS personalizado -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-dark shadow-sm">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-mobile-alt me-2"></i>
+                Automatizacion de Pruebas Transsion
+                <small class="text-muted ms-2 fw-normal" style="font-size: 0.65em;">Tecno | Infinix - Colombia</small>
+            </span>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-light" onclick="refreshDevices()">
+                    <i class="fas fa-sync"></i> Actualizar Dispositivos
+                </button>
+                <span id="executionStatus" class="badge bg-secondary">
+                    <i class="fas fa-circle"></i> Inactivo
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <!-- Selector de Versión Android -->
+        <div class="mb-4">
+            <h5 class="text-muted mb-3"><i class="fas fa-robot me-2"></i>Version de Android</h5>
+            <div class="btn-group" role="group" id="androidVersionGroup">
+                <input type="radio" class="btn-check" name="androidVersion" id="av14" value="14">
+                <label class="btn btn-outline-dark" for="av14">Android 14</label>
+                <input type="radio" class="btn-check" name="androidVersion" id="av15" value="15">
+                <label class="btn btn-outline-dark" for="av15">Android 15</label>
+                <input type="radio" class="btn-check" name="androidVersion" id="av16" value="16" checked>
+                <label class="btn btn-outline-dark" for="av16">Android 16</label>
+            </div>
+            <small class="text-muted ms-3" id="androidVersionNote">La interfaz de automatizacion se adapta segun la version de Android del dispositivo.</small>
+        </div>
+
+        <hr>
+
+        <!-- Dispositivos Conectados -->
+        <div class="mb-4">
+            <h5 class="text-muted mb-3"><i class="fas fa-plug me-2"></i>Dispositivos conectados</h5>
+            <div id="devicesContainer" class="row g-3">
+                <div class="col-12">
+                    <div class="alert alert-secondary text-center mb-0">
+                        <i class="fas fa-spinner fa-spin me-2"></i> Buscando dispositivos conectados...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Pruebas Disponibles -->
+        <h5 class="text-muted mb-3"><i class="fas fa-flask me-2"></i>Pruebas disponibles</h5>
+        <div class="row g-4">
+            <!-- FOTA Test Cases - Claro -->
+            <div class="col-md-4">
+                <div class="card h-100 border-warning shadow-sm test-card">
+                    <div class="card-body text-center d-flex flex-column">
+                        <div class="mb-3">
+                            <i class="fas fa-clipboard-check fa-3x text-warning"></i>
+                        </div>
+                        <h5 class="card-title">FOTA Claro</h5>
+                        <h6 class="card-subtitle mb-3 text-muted">Test Cases OTA</h6>
+                        <p class="card-text small text-muted flex-grow-1">
+                            50 test cases para validacion de actualizaciones FOTA.
+                            Tests automaticos, semi-automaticos y manuales con generacion de informe.
+                        </p>
+                        <button class="btn btn-warning text-dark w-100" data-bs-toggle="modal" data-bs-target="#fotaModal">
+                            <i class="fas fa-play me-1"></i> Iniciar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appendix 3 - Speed Test -->
+            <div class="col-md-4">
+                <div class="card h-100 border-danger shadow-sm test-card">
+                    <div class="card-body text-center d-flex flex-column">
+                        <div class="mb-3">
+                            <i class="fas fa-tachometer-alt fa-3x text-danger"></i>
+                        </div>
+                        <h5 class="card-title">Appendix 3</h5>
+                        <h6 class="card-subtitle mb-3 text-muted">Prueba de Velocidad</h6>
+                        <p class="card-text small text-muted flex-grow-1">
+                            Throughput automatizado con la app Speedtest. DUT vs REF, 5G y 4G,
+                            N iteraciones por red. Extraccion automatica de velocidad y capturas de pantalla.
+                        </p>
+                        <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#speedtestModal">
+                            <i class="fas fa-play me-1"></i> Iniciar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DUT-to-DUT Custom Tests -->
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm test-card" style="border-color: #6f42c1;">
+                    <div class="card-body text-center d-flex flex-column">
+                        <div class="mb-3">
+                            <i class="fas fa-exchange-alt fa-3x" style="color: #6f42c1;"></i>
+                        </div>
+                        <h5 class="card-title">DUT-to-DUT</h5>
+                        <h6 class="card-subtitle mb-3 text-muted">Pruebas Personalizadas</h6>
+                        <p class="card-text small text-muted flex-grow-1">
+                            Pruebas personalizadas entre 2 dispositivos. Llamadas, SMS, cambio de red,
+                            espera/reanudar, VoLTE, y secuencias de acciones configurables.
+                        </p>
+                        <button class="btn w-100 text-white" style="background-color: #6f42c1;" data-bs-toggle="modal" data-bs-target="#dutModal">
+                            <i class="fas fa-play me-1"></i> Iniciar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODALES                                                      -->
+    <!-- ============================================================ -->
+
+    <!-- Modal: Pruebas DUT-to-DUT -->
+    <div class="modal fade" id="dutModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background-color: #6f42c1;">
+                    <h5 class="modal-title"><i class="fas fa-exchange-alt"></i> Pruebas DUT-to-DUT (Dispositivo a dispositivo)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Lista de pruebas -->
+                        <div class="col-md-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Pruebas Disponibles</h6>
+                                <button class="btn btn-sm btn-success" onclick="showCreateTestModal()">
+                                    <i class="fas fa-plus"></i> Nueva
+                                </button>
+                            </div>
+                            <div id="customTestsList" style="max-height: 400px; overflow-y: auto;">
+                            </div>
+                        </div>
+
+                        <!-- Detalles de prueba -->
+                        <div class="col-md-4">
+                            <div id="testDetails">
+                                <div class="alert alert-secondary">
+                                    <i class="fas fa-arrow-left"></i> Selecciona una prueba de la lista
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configuración de ejecución -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <i class="fas fa-cogs"></i> Configuracion de Ejecucion
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3 p-2 border rounded bg-light">
+                                        <h6 class="text-primary"><i class="fas fa-mobile-alt"></i> DUT1</h6>
+                                        <select id="dut1Select" class="form-select form-select-sm mb-2">
+                                            <option value="">Seleccionar dispositivo...</option>
+                                        </select>
+                                        <input type="text" id="dut1Phone" class="form-control form-control-sm"
+                                               placeholder="Numero telefonico DUT1">
+                                    </div>
+
+                                    <div class="mb-3 p-2 border rounded bg-light">
+                                        <h6 class="text-success"><i class="fas fa-mobile-alt"></i> DUT2</h6>
+                                        <select id="dut2Select" class="form-select form-select-sm mb-2">
+                                            <option value="">Seleccionar dispositivo...</option>
+                                        </select>
+                                        <input type="text" id="dut2Phone" class="form-control form-control-sm"
+                                               placeholder="Numero telefonico DUT2">
+                                    </div>
+
+                                    <button class="btn btn-sm btn-secondary w-100 mb-3" onclick="refreshDUTDeviceSelects()">
+                                        <i class="fas fa-sync"></i> Actualizar Dispositivos
+                                    </button>
+
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-success" id="btnDutStart" onclick="startDUTExecution()">
+                                            <i class="fas fa-play"></i> Ejecutar Prueba
+                                        </button>
+                                        <div class="btn-group">
+                                            <button class="btn btn-warning" id="btnDutPause" onclick="pauseDUTExecution()" disabled>
+                                                <i class="fas fa-pause"></i> Pausar
+                                            </button>
+                                            <button class="btn btn-danger" id="btnDutStop" onclick="stopDUTExecution()" disabled>
+                                                <i class="fas fa-stop"></i> Detener
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <div class="progress" style="height: 20px;">
+                                            <div id="dutProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                                 role="progressbar" style="width: 0%">0%</div>
+                                        </div>
+                                        <small id="dutActionProgress" class="text-muted">Listo para iniciar</small>
+                                        <div id="dutStatusText" class="small text-primary mt-1"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mt-3">
+                                <div class="card-header bg-dark text-white py-2">
+                                    <small><i class="fas fa-terminal"></i> Logs</small>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div id="dutLogs" class="bg-dark text-light p-2 rounded small"
+                                         style="height: 150px; overflow-y: auto; font-family: monospace;">
+                                        Esperando ejecucion...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Crear/Editar Prueba -->
+    <div class="modal fade" id="testModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="testModalTitle">Nueva Prueba</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="testForm">
+                        <input type="hidden" id="testId">
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre de la prueba *</label>
+                                <input type="text" id="testName" class="form-control" placeholder="Ej: Llamada bidireccional 30s" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Categoria</label>
+                                <select id="testCategory" class="form-select">
+                                    <option value="basic">Basica</option>
+                                    <option value="long_duration">Larga Duracion</option>
+                                    <option value="volte">VoLTE</option>
+                                    <option value="vowifi">VoWiFi</option>
+                                    <option value="stress">Stress Test</option>
+                                    <option value="general">General</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descripcion</label>
+                            <textarea id="testDescription" class="form-control" rows="2" placeholder="Descripcion de la prueba..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Tags (separados por coma)</label>
+                            <input type="text" id="testTags" class="form-control" placeholder="bidireccional, 30s, basic">
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0"><i class="fas fa-list-ol"></i> Acciones</h6>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="addActionRow()">
+                                <i class="fas fa-plus"></i> Agregar Accion
+                            </button>
+                        </div>
+
+                        <div id="testActions" style="max-height: 300px; overflow-y: auto;">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" onclick="saveCustomTest()">
+                        <i class="fas fa-save"></i> Guardar Prueba
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Speedtest (Appendix 3) -->
+    <div class="modal fade" id="speedtestModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-tachometer-alt"></i> Appendix 3 - Prueba de Velocidad (Throughput)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Panel de configuración -->
+                        <div class="col-md-4">
+                            <div class="card mb-3">
+                                <div class="card-header bg-dark text-white py-2">
+                                    <i class="fas fa-cog"></i> Configuracion
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">Dispositivo</label>
+                                        <select id="stDeviceSelect" class="form-select form-select-sm">
+                                            <option value="">Seleccionar...</option>
+                                        </select>
+                                    </div>
+
+                                    <div id="stDeviceInfo" class="mb-2 p-2 bg-light rounded small" style="display:none;">
+                                        <div><strong>Operador:</strong> <span id="stOperator">-</span></div>
+                                        <div><strong>Red actual:</strong> <span id="stCurrentNet">-</span></div>
+                                        <div><strong>Telefono:</strong> <span id="stPhone">-</span></div>
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">Rol del dispositivo</label>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="stRole" id="stRoleDut" value="dut" checked>
+                                            <label class="btn btn-outline-primary btn-sm" for="stRoleDut">DUT (Principal)</label>
+                                            <input type="radio" class="btn-check" name="stRole" id="stRoleRef" value="ref">
+                                            <label class="btn btn-outline-success btn-sm" for="stRoleRef">REF (Referencia)</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">Redes a probar</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="stNet5g" value="5g" checked>
+                                            <label class="form-check-label" for="stNet5g">5G</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="stNet4g" value="4g" checked>
+                                            <label class="form-check-label" for="stNet4g">4G</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">Iteraciones por red</label>
+                                        <input type="number" id="stIterations" class="form-control form-control-sm" value="5" min="1" max="10">
+                                    </div>
+
+                                    <button class="btn btn-sm btn-secondary w-100 mb-2" onclick="stRefreshDevices()">
+                                        <i class="fas fa-sync"></i> Actualizar Dispositivos
+                                    </button>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-success" id="btnStStart" onclick="stStartExecution()">
+                                            <i class="fas fa-play"></i> Iniciar Speedtest
+                                        </button>
+                                        <button class="btn btn-danger" id="btnStStop" onclick="stStopExecution()" disabled>
+                                            <i class="fas fa-stop"></i> Detener
+                                        </button>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <div class="progress" style="height: 20px;">
+                                            <div id="stProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger"
+                                                 role="progressbar" style="width: 0%">0%</div>
+                                        </div>
+                                        <small id="stProgressText" class="text-muted">Listo para iniciar</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header bg-dark text-white py-2">
+                                    <small><i class="fas fa-terminal"></i> Logs</small>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div id="stLogs" class="bg-dark text-light p-2 rounded small"
+                                         style="height: 150px; overflow-y: auto; font-family: monospace;">
+                                        Esperando ejecucion...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel de resultados -->
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header bg-dark text-white py-2 d-flex justify-content-between">
+                                    <span><i class="fas fa-table"></i> Resultados de velocidad</span>
+                                    <button class="btn btn-sm btn-outline-light" onclick="stSaveResults()">
+                                        <i class="fas fa-save"></i> Guardar
+                                    </button>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div id="stResultsContainer">
+                                        <div class="text-center text-muted py-4">
+                                            <i class="fas fa-tachometer-alt fa-3x mb-2"></i>
+                                            <p>Configura y ejecuta las pruebas para ver los resultados aqui</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mt-3">
+                                <div class="card-header bg-dark text-white py-2">
+                                    <i class="fas fa-camera"></i> Capturas de pantalla
+                                </div>
+                                <div class="card-body p-2">
+                                    <div id="stScreenshots" class="d-flex flex-wrap gap-2">
+                                        <span class="text-muted small">Las capturas de pantalla apareceran aqui...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: FOTA Test Cases -->
+    <div class="modal fade" id="fotaModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-clipboard-check"></i> FOTA Test Cases - Claro</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Panel izquierdo: Configuración -->
+                        <div class="col-md-3">
+                            <div class="card mb-2">
+                                <div class="card-header bg-dark text-white py-1 px-2">
+                                    <small><i class="fas fa-mobile-alt"></i> Dispositivo Principal (DUT)</small>
+                                </div>
+                                <div class="card-body py-2 px-2">
+                                    <select id="fotaDutSelect" class="form-select form-select-sm mb-1">
+                                        <option value="">Seleccionar DUT...</option>
+                                    </select>
+                                    <div id="fotaDutInfo" class="small" style="display:none;">
+                                        <span class="badge bg-primary" id="fotaDutOp">-</span>
+                                        <span class="text-muted ms-1" id="fotaDutPhone">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mb-2">
+                                <div class="card-header bg-dark text-white py-1 px-2">
+                                    <small><i class="fas fa-mobile-alt"></i> DUT2 (Opcional - para SMS/llamadas)</small>
+                                </div>
+                                <div class="card-body py-2 px-2">
+                                    <select id="fotaDut2Select" class="form-select form-select-sm mb-1">
+                                        <option value="">Sin DUT2</option>
+                                    </select>
+                                    <div id="fotaDut2Info" class="small" style="display:none;">
+                                        <span class="badge bg-success" id="fotaDut2Op">-</span>
+                                        <span class="text-muted ms-1" id="fotaDut2Phone">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mb-2">
+                                <div class="card-header bg-dark text-white py-1 px-2">
+                                    <small><i class="fas fa-info-circle"></i> Info del dispositivo</small>
+                                </div>
+                                <div class="card-body py-2 px-2">
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">Modelo</label>
+                                        <input type="text" id="fotaModel" class="form-control form-control-sm" placeholder="Auto-detectado">
+                                    </div>
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">SW Version</label>
+                                        <input type="text" id="fotaSwVersion" class="form-control form-control-sm" placeholder="Auto-detectado">
+                                    </div>
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">Tester</label>
+                                        <input type="text" id="fotaTester" class="form-control form-control-sm" placeholder="Nombre del tester">
+                                    </div>
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">SP Date</label>
+                                        <input type="text" id="fotaSpDate" class="form-control form-control-sm" placeholder="Fecha del Security Patch">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-sm btn-secondary w-100 mb-2" onclick="fotaRefreshDevices()">
+                                <i class="fas fa-sync"></i> Actualizar Dispositivos
+                            </button>
+
+                            <div class="d-grid gap-1 mb-2">
+                                <button class="btn btn-success btn-sm" id="btnFotaRunAll" onclick="fotaRunAllAuto()">
+                                    <i class="fas fa-play"></i> Ejecutar Automaticos
+                                </button>
+                                <button class="btn btn-danger btn-sm" id="btnFotaStop" onclick="fotaStop()" disabled>
+                                    <i class="fas fa-stop"></i> Detener
+                                </button>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-warning" id="fotaProgressBar" role="progressbar" style="width: 0%;">0%</div>
+                                </div>
+                                <small class="text-muted" id="fotaProgressText"></small>
+                            </div>
+
+                            <div class="d-grid mb-2">
+                                <button class="btn btn-primary btn-sm" onclick="fotaGenerateReport()">
+                                    <i class="fas fa-file-excel"></i> Generar Informe Excel
+                                </button>
+                            </div>
+
+                            <div id="fotaLogs" class="bg-dark text-light p-2 rounded small"
+                                 style="height: 150px; overflow-y: auto; font-family: monospace; font-size: 0.7rem;">
+                                Listo para iniciar...
+                            </div>
+                        </div>
+
+                        <!-- Panel derecho: Tabla de tests -->
+                        <div class="col-md-9">
+                            <div class="card">
+                                <div class="card-header bg-dark text-white py-2">
+                                    <i class="fas fa-list-check"></i> Test Cases (50)
+                                    <span class="float-end small">
+                                        <span class="badge bg-success" id="fotaCountPass">0</span> Pass
+                                        <span class="badge bg-danger" id="fotaCountFail">0</span> Fail
+                                        <span class="badge bg-secondary" id="fotaCountNA">0</span> N/A
+                                        <span class="badge bg-info" id="fotaCountPending">0</span> Pendiente
+                                    </span>
+                                </div>
+                                <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
+                                    <table class="table table-bordered table-sm table-hover mb-0">
+                                        <thead class="table-dark sticky-top">
+                                            <tr>
+                                                <th width="35">#</th>
+                                                <th width="150">Titulo</th>
+                                                <th>Descripcion</th>
+                                                <th width="60">Tipo</th>
+                                                <th width="80">Estado</th>
+                                                <th width="120">Accion</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="fotaTestTableBody">
+                                            <tr><td colspan="6" class="text-center text-muted py-3">Selecciona un dispositivo para cargar los tests</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- App JS (notifications + device dashboard) -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <!-- DUT Tests JS -->
+    <script src="{{ url_for('static', filename='js/dut_tests.js') }}"></script>
+    <!-- Speedtest JS -->
+    <script src="{{ url_for('static', filename='js/speedtest.js') }}"></script>
+    <!-- FOTA Tests JS -->
+    <script src="{{ url_for('static', filename='js/fota_tests.js') }}"></script>
+</body>
+</html>

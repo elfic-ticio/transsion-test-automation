@@ -1,0 +1,155 @@
+/* Estilos personalizados para Transsion Test Automation */
+
+:root {
+    --primary-color: #0066cc;
+    --secondary-color: #ff6600;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --dark-color: #343a40;
+    --light-color: #f8f9fa;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+}
+
+/* Tablas */
+.table {
+    font-size: 0.9rem;
+}
+
+.table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 102, 204, 0.05);
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+/* Cards de pruebas en dashboard */
+.test-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: default;
+}
+
+.test-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Panel de log */
+.log-panel {
+    height: 300px;
+    overflow-y: auto;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.75rem;
+    padding: 10px;
+    border-radius: 4px;
+    line-height: 1.4;
+}
+
+/* Cards */
+.card {
+    transition: box-shadow 0.3s ease;
+}
+
+/* Badges de estado */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Barra de progreso */
+.progress {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Modales */
+.modal-title {
+    font-weight: 600;
+}
+
+/* Formularios */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .table {
+        font-size: 0.8rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .log-panel {
+        height: 200px;
+    }
+
+    .navbar-brand {
+        font-size: 0.9rem;
+    }
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Toast notifications */
+.toast {
+    min-width: 250px;
+    font-size: 0.9rem;
+}
+
+/* Disabled elements */
+:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
