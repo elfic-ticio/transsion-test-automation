@@ -125,6 +125,26 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Sanity Check WOM -->
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm test-card" style="border-color: #00796B;">
+                    <div class="card-body text-center d-flex flex-column">
+                        <div class="mb-3">
+                            <i class="fas fa-clipboard-list fa-3x" style="color: #00796B;"></i>
+                        </div>
+                        <h5 class="card-title">Sanity Check WOM</h5>
+                        <h6 class="card-subtitle mb-3 text-muted">Validacion Post-OTA</h6>
+                        <p class="card-text small text-muted flex-grow-1">
+                            72 casos de prueba para validar el dispositivo despues de una actualizacion OTA con WOM Colombia.
+                            VoLTE, VoWiFi, CSFB, 5G NR, GPS, BT, NFC y mas.
+                        </p>
+                        <button class="btn w-100 text-white" style="background-color: #00796B;" data-bs-toggle="modal" data-bs-target="#sanityWomModal">
+                            <i class="fas fa-play me-1"></i> Iniciar
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -480,6 +500,10 @@
                                     <div class="mb-1">
                                         <label class="form-label small mb-0">SW Version</label>
                                         <input type="text" id="fotaSwVersion" class="form-control form-control-sm" placeholder="Auto-detectado">
+                                        <div id="fotaSwVersionWarning" class="alert alert-warning py-1 px-2 mt-1 small" style="display:none;">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            <span id="fotaSwVersionWarningMsg"></span>
+                                        </div>
                                     </div>
                                     <div class="mb-1">
                                         <label class="form-label small mb-0">Tester</label>
@@ -561,6 +585,172 @@
         </div>
     </div>
 
+    <!-- Modal: Sanity Check WOM -->
+    <div class="modal fade" id="sanityWomModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background-color: #00796B;">
+                    <h5 class="modal-title">
+                        <i class="fas fa-clipboard-list me-2"></i>Sanity Check WOM Colombia - Validacion Post-OTA
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="row g-0 h-100">
+
+                        <!-- Panel izquierdo: Configuracion -->
+                        <div class="col-md-3 border-end p-3" style="background:#f8f9fa;">
+
+                            <div class="card mb-2">
+                                <div class="card-header text-white py-1 px-2" style="background:#00796B; font-size:0.8em;">
+                                    <i class="fas fa-mobile-alt"></i> Dispositivo (DUT)
+                                </div>
+                                <div class="card-body py-2 px-2">
+                                    <select id="womDeviceSelect" class="form-select form-select-sm mb-1">
+                                        <option value="">Seleccionar dispositivo...</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-secondary w-100" onclick="womRefreshDevices()">
+                                        <i class="fas fa-sync"></i> Actualizar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card mb-2">
+                                <div class="card-header text-white py-1 px-2" style="background:#00796B; font-size:0.8em;">
+                                    <i class="fas fa-info-circle"></i> Info del Reporte
+                                </div>
+                                <div class="card-body py-2 px-2">
+                                    <input type="text" id="womModel" class="form-control form-control-sm mb-1" placeholder="Modelo (ej: TECNO Camon 40)">
+                                    <input type="text" id="womSwVersion" class="form-control form-control-sm mb-1" placeholder="SW Version">
+                                    <input type="text" id="womTester" class="form-control form-control-sm" placeholder="Nombre del tester">
+                                </div>
+                            </div>
+
+                            <!-- Resumen de resultados -->
+                            <div class="card mb-2">
+                                <div class="card-header text-white py-1 px-2" style="background:#00796B; font-size:0.8em;">
+                                    <i class="fas fa-chart-pie"></i> Resumen
+                                </div>
+                                <div class="card-body py-2 px-2">
+                                    <div class="progress mb-2" style="height:16px;">
+                                        <div id="womProgressBar" class="progress-bar bg-primary" role="progressbar" style="width:0%">0%</div>
+                                    </div>
+                                    <div class="d-flex justify-content-between small">
+                                        <span class="text-success fw-bold"><i class="fas fa-check"></i> <span id="womCountPass">0</span> PASS</span>
+                                        <span class="text-danger fw-bold"><i class="fas fa-times"></i> <span id="womCountFail">0</span> FAIL</span>
+                                        <span class="text-secondary"><span id="womCountNA">0</span> N/A</span>
+                                        <span class="text-warning"><span id="womCountPending">0</span> Pend.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Acciones -->
+                            <div class="d-grid gap-1 mb-2">
+                                <button id="btnWomReport" class="btn btn-sm btn-success" onclick="womGenerateReport()">
+                                    <i class="fas fa-file-excel"></i> Generar Informe Excel
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="womReset()">
+                                    <i class="fas fa-trash-alt"></i> Reiniciar Resultados
+                                </button>
+                            </div>
+
+                            <!-- Feedback -->
+                            <div id="womFeedback" class="alert py-1 px-2 small" style="display:none;"></div>
+
+                            <!-- Leyenda -->
+                            <div class="card">
+                                <div class="card-body py-2 px-2" style="font-size:0.72em;">
+                                    <div class="mb-1"><span class="badge bg-success">AUTO</span> ADB ejecuta y verifica automaticamente</div>
+                                    <div class="mb-1"><span class="badge bg-warning text-dark">SEMI</span> ADB inicia la accion, tester verifica</div>
+                                    <div><span class="badge bg-secondary">MANUAL</span> Requiere intervencion humana completa</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel derecho: Tabla de casos -->
+                        <div class="col-md-9 d-flex flex-column">
+
+                            <!-- Filtros de categoria -->
+                            <div class="p-2 border-bottom bg-white d-flex flex-wrap gap-1 align-items-center">
+                                <span class="small text-muted me-1">Filtrar:</span>
+                                <button class="btn btn-sm btn-secondary wom-cat-btn active" data-cat="all" onclick="womSetCategory('all')">Todos (72)</button>
+                                <button class="btn btn-sm btn-outline-primary wom-cat-btn" data-cat="general" onclick="womSetCategory('general')">General</button>
+                                <button class="btn btn-sm btn-outline-warning wom-cat-btn" data-cat="csfb" onclick="womSetCategory('csfb')">CSFB</button>
+                                <button class="btn btn-sm wom-cat-btn" style="border-color:#6f42c1; color:#6f42c1;" data-cat="volte" onclick="womSetCategory('volte')">VoLTE</button>
+                                <button class="btn btn-sm btn-outline-success wom-cat-btn" data-cat="vowifi" onclick="womSetCategory('vowifi')">VoWiFi</button>
+                                <button class="btn btn-sm btn-outline-danger wom-cat-btn" data-cat="5g" onclick="womSetCategory('5g')">5G NR</button>
+                            </div>
+
+                            <!-- Tabla -->
+                            <div class="flex-grow-1 overflow-auto">
+                                <table class="table table-bordered table-sm table-hover mb-0">
+                                    <thead class="table-dark sticky-top">
+                                        <tr>
+                                            <th width="35" class="text-center">#</th>
+                                            <th>Caso de Prueba</th>
+                                            <th width="70" class="text-center">Tipo</th>
+                                            <th width="120" class="text-center">Resultado</th>
+                                            <th>Observacion</th>
+                                            <th width="50" class="text-center">ADB</th>
+                                            <th width="50" class="text-center">Info</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="womTableBody">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-4">
+                                                <i class="fas fa-spinner fa-spin me-2"></i>Cargando casos de prueba...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Detalle de caso WOM -->
+    <div class="modal fade" id="womDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background-color: #00796B;">
+                    <h6 class="modal-title" id="womDetailTitle">Detalle del caso</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex gap-2 mb-3 align-items-center flex-wrap">
+                        <span class="badge bg-dark" id="womDetailNumber"></span>
+                        <span class="badge bg-primary" id="womDetailCat"></span>
+                        <span id="womDetailAuto"></span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Descripcion:</strong>
+                        <p class="text-muted small mb-0" id="womDetailDesc"></p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Procedimiento:</strong>
+                        <pre class="bg-light p-2 rounded small mb-0" id="womDetailProc" style="white-space: pre-wrap; font-size:0.78em;"></pre>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Resultado esperado:</strong>
+                        <p class="text-muted small mb-0" id="womDetailExpected"></p>
+                    </div>
+                    <div id="womAutoResultPanel" class="alert" style="display:none;">
+                        <strong>Resultado ADB:</strong> <span id="womAutoResultMsg"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="womDetailRunBtn" class="btn btn-primary" style="display:none;">
+                        <i class="fas fa-play me-1"></i> Ejecutar ADB
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- App JS (notifications + device dashboard) -->
@@ -571,5 +761,7 @@
     <script src="{{ url_for('static', filename='js/speedtest.js') }}"></script>
     <!-- FOTA Tests JS -->
     <script src="{{ url_for('static', filename='js/fota_tests.js') }}"></script>
+    <!-- Sanity Check WOM JS -->
+    <script src="{{ url_for('static', filename='js/sanity_wom.js') }}"></script>
 </body>
 </html>

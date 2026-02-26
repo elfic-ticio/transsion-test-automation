@@ -13,6 +13,11 @@ from custom_tests import CustomTestManager, CustomTest
 from dut_executor import DUTExecutor, DUTConfig
 from speedtest_executor import SpeedtestExecutor
 from fota_executor import FOTAExecutor
+from sanity_wom_executor import SanityWOMExecutor
+
+# Crear directorios necesarios antes de configurar logging
+for folder in ['data', 'screenshots', 'logs']:
+    os.makedirs(folder, exist_ok=True)
 
 # Configuración de logging
 logging.basicConfig(
@@ -28,16 +33,13 @@ logger = logging.getLogger(__name__)
 # Crear aplicación Flask
 app = Flask(__name__)
 
-# Crear directorios necesarios
-for folder in ['data', 'screenshots', 'logs']:
-    os.makedirs(folder, exist_ok=True)
-
 # Instancias globales
 adb_manager = ADBManager()
 custom_test_manager = CustomTestManager()
 dut_executor = DUTExecutor(adb_manager)
 speedtest_executor = SpeedtestExecutor(adb_manager)
 fota_executor = FOTAExecutor(adb_manager)
+sanity_wom_executor = SanityWOMExecutor(adb_manager)
 
 # ==================== RUTAS DE PÁGINA ====================
 
@@ -60,6 +62,39 @@ def api_get_devices():
     except Exception as e:
         logger.error(f"Error getting devices: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/phone-debug', methods=['GET'])
+def api_phone_debug(serial):
+    """Diagnostico: muestra el output raw de cada metodo de deteccion de numero."""
+    cmds = {
+        'siminfo_all_cols':           'shell content query --uri content://telephony/siminfo',
+        'siminfo_projection':         'shell content query --uri content://telephony/siminfo --projection sim_slot_index:number:display_name',
+        'dumpsys_iphonesubinfo':      'shell dumpsys iphonesubinfo',
+        'ril_msisdn1':                'shell getprop ril.msisdn1',
+        'ril_msisdn':                 'shell getprop ril.msisdn',
+        'ril_number':                 'shell getprop ril.number',
+        'gsm_sim_msisdn':             'shell getprop gsm.sim.msisdn',
+        'service_16_i32_1':           'shell service call iphonesubinfo 16 i32 1',
+        'service_16_i32_2':           'shell service call iphonesubinfo 16 i32 2',
+        'service_6':                  'shell service call iphonesubinfo 6',
+        'service_11':                 'shell service call iphonesubinfo 11',
+        'service_3':                  'shell service call iphonesubinfo 3',
+        'service_16':                 'shell service call iphonesubinfo 16',
+        'settings_mobile_data_number':'shell settings get global mobile_data_number',
+        'settings_mobile_number':     'shell settings get global mobile_number',
+        'settings_phone_number':      'shell settings get global phone_number',
+        'telephony_registry':         'shell dumpsys telephony.registry',
+    }
+    results = {}
+    for key, cmd in cmds.items():
+        ok, out = adb_manager.run_command(cmd, serial)
+        results[key] = {'ok': ok, 'output': out[:500] if out else ''}
+
+    # Incluir también el resultado final de la cascada completa
+    detected = adb_manager._get_phone_numbers(serial)
+    results['_detected_numbers'] = detected
+
+    return jsonify({'serial': serial, 'results': results})
 
 @app.route('/api/devices/<serial>/refresh', methods=['POST'])
 def api_refresh_device(serial):
@@ -606,6 +641,83 @@ def api_fota_report_download(filename):
     if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True)
     return jsonify({'error': 'Not found'}), 404
+
+# ==================== API: SANITY CHECK WOM ====================
+
+@app.route('/api/sanity-wom/tests', methods=['GET'])
+def api_sanity_wom_tests():
+    """Retorna todos los casos del Sanity Check WOM con resultados actuales."""
+    try:
+        tests = sanity_wom_executor.get_test_cases()
+        return jsonify({'success': True, 'tests': tests})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sanity-wom/set-result', methods=['POST'])
+def api_sanity_wom_set_result():
+    """Guarda el resultado (pass/fail/na) y observacion de un caso."""
+    try:
+        data = request.json
+        test_id = data.get('test_id')
+        result = data.get('result')
+        remark = data.get('remark', '')
+
+        if not test_id or not result:
+            return jsonify({'success': False, 'error': 'test_id y result son requeridos'}), 400
+
+        ok = sanity_wom_executor.set_result(test_id, result, remark)
+        return jsonify({'success': ok})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sanity-wom/run', methods=['POST'])
+def api_sanity_wom_run():
+    """Ejecuta la automatizacion ADB de un caso (AUTO o SEMI)."""
+    try:
+        data = request.json
+        test_id = data.get('test_id')
+        serial = data.get('serial')
+
+        if not test_id or not serial:
+            return jsonify({'success': False, 'error': 'test_id y serial son requeridos'}), 400
+
+        result = sanity_wom_executor.run_auto_test(test_id, serial)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error running WOM sanity test: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sanity-wom/report', methods=['POST'])
+def api_sanity_wom_report():
+    """Genera el informe Excel del Sanity Check WOM."""
+    try:
+        data = request.json
+        model = data.get('model', '')
+        tester = data.get('tester', '')
+        sw_version = data.get('sw_version', '')
+
+        filepath = sanity_wom_executor.generate_excel_report(model, tester, sw_version)
+        return jsonify({'success': True, 'path': filepath})
+    except Exception as e:
+        logger.error(f"Error generating WOM report: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sanity-wom/report/download/<path:filename>')
+def api_sanity_wom_report_download(filename):
+    """Descarga un informe del Sanity Check WOM."""
+    filepath = os.path.join('data', 'sanity_wom_reports', filename)
+    if os.path.exists(filepath):
+        return send_file(filepath, as_attachment=True)
+    return jsonify({'error': 'Not found'}), 404
+
+@app.route('/api/sanity-wom/reset', methods=['POST'])
+def api_sanity_wom_reset():
+    """Resetea todos los resultados a 'pending'."""
+    try:
+        sanity_wom_executor.reset_results()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ==================== MAIN ====================
 

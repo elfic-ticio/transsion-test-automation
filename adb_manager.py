@@ -23,11 +23,14 @@ class Device:
     model: str
     android_version: str
     manufacturer: str = ""
+    sw_version: str = ""
     network_type: str = ""
     signal_strength: int = 0
     sim_operator: str = ""
     sim_state: str = ""
-    phone_number: str = ""
+    phone_number: str = ""   # Texto display (puede incluir "SIM1: X / SIM2: Y")
+    phone_sim1: str = ""     # Numero limpio SIM1 (para auto-fill en DUT)
+    phone_sim2: str = ""     # Numero limpio SIM2 (para auto-fill en DUT)
     is_connected: bool = False
     volte_enabled: bool = False
     vowifi_enabled: bool = False
@@ -126,6 +129,7 @@ class ADBManager:
                     model=self._get_prop(serial, "ro.product.model"),
                     android_version=self._get_prop(serial, "ro.build.version.release"),
                     manufacturer=self._get_prop(serial, "ro.product.manufacturer"),
+                    sw_version=self._get_prop(serial, "ro.build.display.id"),
                     is_connected=True
                 )
 
@@ -209,10 +213,17 @@ class ADBManager:
         else:
             device.sim_operator = "Sin operador"
 
-        # Número de teléfono
-        phone = self._get_phone_number(device.serial)
-        if phone:
-            device.phone_number = phone
+        # Numeros de telefono por SIM
+        nums = self._get_phone_numbers(device.serial)
+        device.phone_sim1 = nums.get(1, "")
+        device.phone_sim2 = nums.get(2, "")
+        if nums:
+            if len(nums) == 1:
+                device.phone_number = next(iter(nums.values()))
+            else:
+                device.phone_number = " / ".join(f"SIM{s}: {n}" for s, n in sorted(nums.items()))
+        else:
+            device.phone_number = ""
 
     def _update_call_features(self, device: Device):
         """Actualiza estado de VoLTE/VoWiFi"""
@@ -433,16 +444,25 @@ class ADBManager:
     #   Posición 1: 4G/3G/2G
     #   Posición 2 (abajo): 3G/2G
     NETWORK_MODE_INDEX = {
-        '5g':   0,
-        'auto': 0,
-        '4g':   1,
-        '3g':   2,
+        '5g':   0,   # 5G/4G/3G/2G (Automático) — opción más alta
+        'auto': 0,   # igual que 5g
+        '4g':   1,   # 4G/3G/2G (Automático)
+        '3g':   2,   # 3G/2G (Automático)
     }
+
+    # Fabricantes de la familia Transsion (Infinix, Tecno, itel)
+    TRANSSION_MANUFACTURERS = {'transsion', 'infinix', 'tecno', 'itel'}
+
+    def _is_transsion_device(self, serial: str) -> bool:
+        """Detecta si el dispositivo es de la familia Transsion (Infinix, Tecno, itel)."""
+        mfr = self._get_prop(serial, 'ro.product.manufacturer').lower().strip()
+        return any(m in mfr for m in self.TRANSSION_MANUFACTURERS)
 
     def _open_operator_settings(self, serial: str, sim_slot: int = 0) -> Tuple[bool, str]:
         """
-        Abre MobileNetworkSettings y navega a la pantalla del operador SIM.
-        Busca por nombre canónico Y etiqueta del SIM para cubrir etiquetas personalizadas.
+        Abre la pantalla de configuración del operador SIM.
+        - Transsion (Infinix/Tecno/itel): usa NETWORK_OPERATOR_SETTINGS que llega directo.
+        - Xiaomi y otros: abre MobileNetworkSettings y navega al operador por nombre.
         Retorna (ok, operator_name). Deja la pantalla en la configuración del operador.
         """
         if sim_slot == 0:
@@ -452,14 +472,30 @@ class ADBManager:
         time.sleep(0.5)
         self.run_command('shell input keyevent 82', serial)
         time.sleep(0.5)
+
+        canonical_name = self._get_sim_operator_name(serial, sim_slot)
+        sim_label      = self._get_sim_label(serial, sim_slot)
+        operator_name  = canonical_name or sim_label or f'SIM{sim_slot}'
+
+        if self._is_transsion_device(serial):
+            # ── Infinix / Tecno / itel ──────────────────────────────────────────
+            # NETWORK_OPERATOR_SETTINGS abre directamente la pantalla del operador
+            # activo (SIM 1 por defecto) sin necesidad de navegar por nombre.
+            self.run_command(
+                'shell am start -a android.settings.NETWORK_OPERATOR_SETTINGS',
+                serial
+            )
+            time.sleep(2)
+            logger.info(f"Transsion: pantalla de operador abierta directamente ({operator_name})")
+            return True, operator_name
+
+        # ── Xiaomi y otros ──────────────────────────────────────────────────────
+        # Abre MobileNetworkSettings y busca el operador por nombre para navegar.
         self.run_command(
             'shell am start -S -n com.android.phone/.settings.MobileNetworkSettings',
             serial
         )
         time.sleep(2)
-
-        canonical_name = self._get_sim_operator_name(serial, sim_slot)
-        sim_label = self._get_sim_label(serial, sim_slot)
 
         if not canonical_name and not sim_label:
             return False, f"No se pudo obtener el nombre del operador para SIM {sim_slot}"
@@ -686,22 +722,177 @@ class ADBManager:
                 return 2
         return 1
 
-    def _get_phone_number(self, serial: str) -> str:
+    def _parse_iphonesubinfo_parcel(self, output: str) -> str:
         """
-        Obtiene el número de teléfono de la SIM activa via service call iphonesubinfo.
-        Parsea la respuesta Parcel Unicode que devuelve Android.
+        Parsea la respuesta Parcel Unicode de iphonesubinfo.
+        Formato: Result: Parcel(... "'+.5.7.3.1.2.3.4.5.6.7'" ...)
         """
-        success, output = self.run_command('shell service call iphonesubinfo 16', serial)
-        if success and output:
-            # Extraer caracteres del formato Parcel: '........+.5.7.3.' etc.
-            chars = re.findall(r"'([^']+)'", output)
-            if chars:
-                raw = ''.join(chars)
-                # Filtrar solo dígitos y +
-                number = ''.join(c for c in raw if c.isdigit() or c == '+')
-                if number:
-                    return number
+        # Extraer contenido entre comillas simples
+        chars = re.findall(r"'([^']+)'", output)
+        if chars:
+            raw = ''.join(chars)
+            number = ''.join(c for c in raw if c.isdigit() or c == '+')
+            if len(number) >= 7:
+                return number
         return ""
+
+    def _get_phone_numbers(self, serial: str) -> Dict[int, str]:
+        """
+        Obtiene los numeros de telefono de cada SIM.
+        Devuelve dict {1: "+573XXX", 2: "+573YYY"} con solo las SIMs con numero detectado.
+
+        Cascada de metodos (Android 11+ restringió READ_PHONE_NUMBERS para service call):
+          1. content://telephony/siminfo         — content provider, sin permisos extra
+          2. dumpsys iphonesubinfo               — texto legible, Android 8-13
+          3. getprop ril.msisdn*                 — algunos fabricantes (Qualcomm/MIUI)
+          4. settings get global mobile_data_number — ajustes del sistema
+          5. dumpsys telephony.registry          — mPhoneNumber, Android 12+
+          6. service call iphonesubinfo          — fallback legacy
+        """
+        results: Dict[int, str] = {}
+
+        def clean_num(raw: str) -> str:
+            n = re.sub(r'[\s\-\(\)]', '', (raw or '').strip())
+            if len(n) >= 7 and n.lower() not in ('null', 'unknown', '') and re.search(r'\d{5}', n):
+                return n
+            return ''
+
+        # ── Metodo 1: content provider telephony/siminfo (sin filtro de columnas) ──────
+        # La columna puede llamarse "number", "phone_number" o "icc_id" segun el fabricante.
+        # Se trae todo y se busca cualquier campo que contenga un numero de telefono valido.
+        ok, out = self.run_command(
+            'shell content query --uri content://telephony/siminfo',
+            serial
+        )
+        if ok and out:
+            # Cada fila: "Row: N col1=val1, col2=val2, ..."
+            # Buscamos slot y cualquier campo con numero de telefono (+57...)
+            for row in out.splitlines():
+                if 'Row:' not in row:
+                    continue
+                # Slot: sim_slot_index o slot_index
+                slot_m = re.search(r'sim_slot_index=(\d+)', row)
+                if not slot_m:
+                    slot_m = re.search(r'slot(?:_index)?=(\d+)', row)
+                slot = int(slot_m.group(1)) + 1 if slot_m else None
+
+                # Numero: buscar campo "number=", "phone_number=", "msisdn=" con valor valido
+                num = ''
+                for field in re.findall(r'(?:number|phone_number|msisdn)=([^,\n]+)', row, re.IGNORECASE):
+                    n = clean_num(field)
+                    if n:
+                        num = n
+                        break
+
+                if num:
+                    results[slot if slot else len(results) + 1] = num
+
+        if results:
+            return results
+
+        # ── Metodo 2: dumpsys iphonesubinfo ──────────────────────────────────────────
+        ok, out = self.run_command('shell dumpsys iphonesubinfo', serial)
+        if ok and out:
+            phone_blocks = re.split(r'Phone\s*#\s*=\s*(\d+)', out)
+            if len(phone_blocks) > 2:
+                for i in range(1, len(phone_blocks) - 1, 2):
+                    slot_num = int(phone_blocks[i]) + 1
+                    block    = phone_blocks[i + 1]
+                    m = re.search(r'Line 1 (?:Phone )?Number\s*=\s*([\+\d\s\-]+)', block)
+                    if m:
+                        n = clean_num(m.group(1))
+                        if n:
+                            results[slot_num] = n
+            else:
+                m = re.search(r'Line 1 (?:Phone )?Number\s*=\s*([\+\d\s\-]+)', out)
+                if m:
+                    n = clean_num(m.group(1))
+                    if n:
+                        results[1] = n
+
+        if results:
+            return results
+
+        # ── Metodo 3: getprop ril.msisdn / ril.number ────────────────────────────────
+        for prop in ['ril.msisdn1', 'ril.msisdn', 'ril.number', 'gsm.sim.msisdn']:
+            ok, out = self.run_command(f'shell getprop {prop}', serial)
+            if ok and out:
+                for idx, part in enumerate(out.split(','), 1):
+                    n = clean_num(part)
+                    if n:
+                        results[idx] = n
+            if results:
+                return results
+
+        # ── Metodo 4: settings get global mobile_data_number ────────────────────────────
+        for key in ['mobile_data_number', 'mobile_number', 'phone_number']:
+            ok, out = self.run_command(f'shell settings get global {key}', serial)
+            if ok and out:
+                n = clean_num(out.strip())
+                if n:
+                    results[1] = n
+                    return results
+
+        # ── Metodo 5: dumpsys telephony.registry (mPhoneNumber, Android 12+) ──────────
+        ok, out = self.run_command('shell dumpsys telephony.registry', serial)
+        if ok and out:
+            # Buscar mPhoneNumber o phoneNumber por slot
+            slot_blocks = re.split(r'(?:slot|phone)\s*(?:id|index)?\s*=?\s*(\d+)', out, flags=re.IGNORECASE)
+            if len(slot_blocks) > 2:
+                for i in range(1, len(slot_blocks) - 1, 2):
+                    slot_num = int(slot_blocks[i]) + 1
+                    block = slot_blocks[i + 1]
+                    for field in re.findall(r'm?[Pp]hone[Nn]umber\s*=\s*([^\s,\n]+)', block):
+                        n = clean_num(field)
+                        if n:
+                            results[slot_num] = n
+                            break
+            else:
+                for field in re.findall(r'm?[Pp]hone[Nn]umber\s*=\s*([^\s,\n]+)', out):
+                    n = clean_num(field)
+                    if n:
+                        results[1] = n
+                        break
+            for field in re.findall(r'mNumber\s*=\s*([^\s,\n]+)', out):
+                n = clean_num(field)
+                if n and 1 not in results:
+                    results[1] = n
+                    break
+
+        if results:
+            return results
+
+        # ── Metodo 6: service call iphonesubinfo (legacy, puede fallar en Android 11+) ─
+        for slot in [1, 2]:
+            for code in [16, 6, 11]:
+                ok, out = self.run_command(
+                    f'shell service call iphonesubinfo {code} i32 {slot}', serial
+                )
+                if ok and out:
+                    n = self._parse_iphonesubinfo_parcel(out)
+                    if n:
+                        results[slot] = n
+                        break
+        if results:
+            return results
+
+        for code in [16, 6, 11, 3]:
+            ok, out = self.run_command(f'shell service call iphonesubinfo {code}', serial)
+            if ok and out:
+                n = self._parse_iphonesubinfo_parcel(out)
+                if n:
+                    return {1: n}
+
+        return {}
+
+    def _get_phone_number(self, serial: str) -> str:
+        """Compatibilidad: devuelve string de display con todos los numeros detectados."""
+        nums = self._get_phone_numbers(serial)
+        if not nums:
+            return ""
+        if len(nums) == 1:
+            return next(iter(nums.values()))
+        return " / ".join(f"SIM{s}: {n}" for s, n in sorted(nums.items()))
 
     def _get_sim_operator_name(self, serial: str, sim_slot: int = 0) -> str:
         """
@@ -814,10 +1005,17 @@ class ADBManager:
         self.run_command(f"shell input tap {selected['cx']} {selected['cy']}", serial)
         time.sleep(1)
 
-        # 5. Cerrar pantallas de ajustes
+        # 5. Confirmar selección si hay botón "Aceptar" (Infinix/Tecno muestran diálogo con botón)
+        #    En Xiaomi y otros la selección se aplica directamente sin confirmación.
+        confirmed = self._ui_find_and_tap(serial, 'Aceptar', wait_after=1.0)
+        if not confirmed[0]:
+            # Intentar "OK" como fallback (algunos idiomas/ROMs)
+            self._ui_find_and_tap(serial, 'OK', wait_after=1.0)
+
+        # 6. Cerrar pantallas de ajustes
         self._close_settings(serial)
 
-        # 6. Esperar a que la red se estabilice
+        # 7. Esperar a que la red se estabilice
         time.sleep(5)
 
         current = self.get_current_network_type(serial)

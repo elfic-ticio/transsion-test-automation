@@ -3,13 +3,11 @@ Configuración de ruta de ADB
 """
 import os
 
-# CONFIGURA AQUÍ LA RUTA DE TU ADB
-# Usando ADB versión 36.0.2 (compatible con Android 16)
-ADB_PATH = r"C:\android-sdk-platform-tools-adb-36-02\platform-tools\adb.exe"
+# Ruta de ADB incluida dentro del proyecto
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ADB_PATH = os.path.join(_BASE_DIR, "platform-tools-36.0.2", "adb.exe")
 
-# Verificar si el archivo existe
+# Si por alguna razón no se encuentra, intentar con adb del sistema
 if not os.path.exists(ADB_PATH):
-    print(f"⚠️ ADVERTENCIA: ADB no encontrado en: {ADB_PATH}")
-    print("Por favor, edita el archivo adb_config.py y configura la ruta correcta")
-    # Intentar usar ADB del sistema
+    print(f"ADVERTENCIA: ADB no encontrado en: {ADB_PATH}")
     ADB_PATH = "adb"

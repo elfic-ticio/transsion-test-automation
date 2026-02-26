@@ -73,28 +73,45 @@ async function refreshDevices() {
             container.innerHTML = data.devices.map(device => {
                 const op = device.sim_operator || 'Desconocido';
                 const opColor = OPERATOR_COLORS[op] || 'secondary';
-                const phone = device.phone_number || 'Sin numero detectado';
                 const net = device.network_type || '-';
                 const serial = device.serial || '';
-                const shortSerial = serial.length > 12 ? serial.substring(0, 12) + '...' : serial;
                 const androidVer = device.android_version || '-';
+                const swVer = device.sw_version || '-';
+                const mfr = device.manufacturer ? `${device.manufacturer} ` : '';
+
+                // Numero de telefono: mostrar SIM1/SIM2 por separado si hay dual SIM
+                let phoneHtml = '';
+                if (device.phone_sim1 && device.phone_sim2) {
+                    phoneHtml = `<i class="fas fa-sim-card me-1"></i>SIM1: ${device.phone_sim1} &nbsp; SIM2: ${device.phone_sim2}`;
+                } else if (device.phone_sim1 || device.phone_sim2) {
+                    phoneHtml = `<i class="fas fa-sim-card me-1"></i>${device.phone_sim1 || device.phone_sim2}`;
+                } else {
+                    phoneHtml = `<i class="fas fa-sim-card me-1 text-muted"></i><span class="text-muted fst-italic">Sin numero</span>`;
+                }
 
                 return `
                     <div class="col-md-6">
                         <div class="card border-${opColor} shadow-sm">
-                            <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
-                                <i class="fas fa-mobile-alt fa-2x text-${opColor}"></i>
-                                <div class="flex-grow-1">
-                                    <div class="fw-bold">${device.model || 'Dispositivo desconocido'}</div>
-                                    <div class="small text-muted">${shortSerial}</div>
+                            <div class="card-body py-2 px-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="fas fa-mobile-alt fa-2x text-${opColor}"></i>
+                                    <div class="flex-grow-1 min-width-0">
+                                        <div class="fw-bold">${mfr}${device.model || 'Dispositivo desconocido'}</div>
+                                        <div class="small text-muted font-monospace">${serial}</div>
+                                    </div>
+                                    <div class="text-center flex-shrink-0">
+                                        <span class="badge bg-${opColor}">${op}</span>
+                                        <div class="small mt-1"><i class="fas fa-signal me-1"></i>${net}</div>
+                                    </div>
                                 </div>
-                                <div class="text-center">
-                                    <span class="badge bg-${opColor} fs-6">${op}</span>
-                                    <div class="small text-muted mt-1"><i class="fab fa-android me-1"></i>Android ${androidVer}</div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="small"><i class="fas fa-signal me-1"></i>${net}</div>
-                                    <div class="small text-muted"><i class="fas fa-phone me-1"></i>${phone}</div>
+                                <hr class="my-1">
+                                <div class="small text-muted d-flex flex-column gap-1">
+                                    <div>
+                                        <i class="fab fa-android me-1"></i>Android ${androidVer}
+                                        &nbsp;&nbsp;
+                                        <i class="fas fa-code-branch me-1"></i>${swVer}
+                                    </div>
+                                    <div>${phoneHtml}</div>
                                 </div>
                             </div>
                         </div>

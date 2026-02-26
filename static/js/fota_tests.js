@@ -51,8 +51,21 @@ function fotaOnDeviceChange() {
         info.style.display = 'block';
 
         // Auto-llenar info del dispositivo
-        document.getElementById('fotaModel').value = dev.model || '';
-        document.getElementById('fotaSwVersion').value = dev.android_version || '';
+        document.getElementById('fotaModel').value    = dev.model      || '';
+        const swVer = dev.sw_version || '';
+        document.getElementById('fotaSwVersion').value = swVer;
+
+        // Advertencia si la version SW no corresponde a Claro Colombia (COCL)
+        const warn    = document.getElementById('fotaSwVersionWarning');
+        const warnMsg = document.getElementById('fotaSwVersionWarningMsg');
+        if (warn && warnMsg) {
+            if (swVer && !swVer.toUpperCase().includes('COCL')) {
+                warnMsg.textContent = `La version "${swVer}" no parece ser de Claro Colombia (no contiene "COCL"). Verifique que el firmware sea correcto antes de ejecutar las pruebas.`;
+                warn.style.display = 'block';
+            } else {
+                warn.style.display = 'none';
+            }
+        }
 
         fotaLoadTests();
     } else {

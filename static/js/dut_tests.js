@@ -454,6 +454,10 @@ async function startDUTExecution() {
         const data = await response.json();
 
         if (data.success) {
+            // Guardar números en caché para próximas sesiones
+            savePhoneToCache(dut1Serial, dut1Phone);
+            savePhoneToCache(dut2Serial, dut2Phone);
+
             dutState.isExecuting = true;
             updateDUTExecutionButtons(true);
             showNotification('Ejecución DUT-to-DUT iniciada', 'success');
@@ -612,16 +616,90 @@ async function refreshDUTDeviceSelects() {
         dut1Select.onchange = () => autoFillPhone('dut1Select', 'dut1Phone');
         dut2Select.onchange = () => autoFillPhone('dut2Select', 'dut2Phone');
 
+        // Persistencia: guardar número cuando el usuario lo escribe manualmente
+        setupPhonePersistence('dut1Phone', 'dut1Select');
+        setupPhonePersistence('dut2Phone', 'dut2Select');
+
     } catch (error) {
         console.error('Error cargando dispositivos:', error);
     }
 }
 
+function savePhoneToCache(serial, phone) {
+    if (!serial || !phone) return;
+    try {
+        localStorage.setItem('dut_phone_' + serial, phone);
+    } catch (e) {
+        console.warn('No se pudo guardar en localStorage:', e);
+    }
+}
+
+function loadPhoneFromCache(serial) {
+    if (!serial) return '';
+    try {
+        return localStorage.getItem('dut_phone_' + serial) || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function setupPhonePersistence(phoneInputId, selectId) {
+    const phoneInput = document.getElementById(phoneInputId);
+    if (!phoneInput) return;
+
+    phoneInput.addEventListener('input', function() {
+        const serial = document.getElementById(selectId)?.value;
+        const phone = phoneInput.value.trim();
+        if (serial && phone) {
+            savePhoneToCache(serial, phone);
+            // Indicar que fue guardado localmente
+            phoneInput.title = 'Número guardado localmente para este dispositivo';
+        }
+    });
+}
+
 function autoFillPhone(selectId, phoneInputId) {
     const serial = document.getElementById(selectId).value;
     const phoneInput = document.getElementById(phoneInputId);
-    if (serial && deviceInfoMap[serial] && deviceInfoMap[serial].phone_number) {
-        phoneInput.value = deviceInfoMap[serial].phone_number;
+    if (!phoneInput) return;
+
+    if (!serial) {
+        phoneInput.value = '';
+        phoneInput.placeholder = 'Numero telefonico';
+        phoneInput.classList.remove('is-valid', 'is-invalid');
+        phoneInput.title = '';
+        return;
+    }
+
+    const dev = deviceInfoMap[serial];
+
+    // 1) Intentar número detectado por ADB
+    const apiNum = (dev && (dev.phone_sim1 || dev.phone_sim2)) || '';
+
+    // 2) Si ADB no lo detectó, intentar desde caché local (número ingresado previamente)
+    const cachedNum = loadPhoneFromCache(serial);
+
+    const num = apiNum || cachedNum;
+    phoneInput.value = num;
+
+    if (num) {
+        if (apiNum) {
+            // Número detectado por ADB
+            if (dev.phone_sim1 && dev.phone_sim2) {
+                phoneInput.title = `SIM1: ${dev.phone_sim1} | SIM2: ${dev.phone_sim2}`;
+            } else {
+                phoneInput.title = 'Número detectado automáticamente';
+            }
+        } else {
+            // Número desde caché local
+            phoneInput.title = 'Número guardado localmente (ingresado antes)';
+        }
+        phoneInput.classList.remove('is-invalid');
+        phoneInput.classList.add('is-valid');
+    } else {
+        phoneInput.placeholder = 'No detectado – ingresar manualmente';
+        phoneInput.classList.remove('is-valid');
+        phoneInput.title = '';
     }
 }
 

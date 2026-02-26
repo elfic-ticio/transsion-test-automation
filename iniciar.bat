@@ -9,5 +9,6 @@ if not exist logs mkdir logs
 if not exist data mkdir data
 if not exist screenshots mkdir screenshots
 echo.
-python app.py
+set PYTHONIOENCODING=utf-8
+uv run python app.py
 pause
