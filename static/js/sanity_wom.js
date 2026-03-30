@@ -85,6 +85,8 @@ document.addEventListener('change', e => {
             if (inpModel && !inpModel.value) inpModel.value = model;
             if (inpSW)                        inpSW.value   = swVer;
         }
+        // Recargar tests con filtro 5G según el dispositivo seleccionado
+        womLoadTests();
     }
 });
 
@@ -92,11 +94,32 @@ document.addEventListener('change', e => {
 // Carga de tests
 // ──────────────────────────────────────────────
 function womLoadTests() {
-    fetch('/api/sanity-wom/tests')
+    const serial = SANITY_WOM.selectedSerial || '';
+    const url = serial ? `/api/sanity-wom/tests?serial=${encodeURIComponent(serial)}` : '/api/sanity-wom/tests';
+    fetch(url)
         .then(r => r.json())
         .then(data => {
             if (!data.success) return;
             SANITY_WOM.tests = data.tests;
+
+            // Mostrar alerta si el dispositivo no soporta 5G
+            const notice = document.getElementById('wom5gNotice');
+            if (notice) {
+                if (serial && data.supports_5g === false) {
+                    notice.className = 'alert alert-warning py-1 px-2 small mb-2';
+                    notice.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>'
+                        + 'Este dispositivo <strong>no soporta 5G NR</strong>. Los tests 5G se han marcado como <strong>N/A</strong> automáticamente.';
+                    notice.style.display = '';
+                } else if (serial && data.supports_5g === true) {
+                    notice.className = 'alert alert-success py-1 px-2 small mb-2';
+                    notice.innerHTML = '<i class="fas fa-broadcast-tower me-1"></i>'
+                        + 'Dispositivo con <strong>soporte 5G NR</strong> confirmado.';
+                    notice.style.display = '';
+                } else {
+                    notice.style.display = 'none';
+                }
+            }
+
             womRender();
             womUpdateSummary();
         })

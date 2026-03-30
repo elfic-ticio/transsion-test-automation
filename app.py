@@ -646,10 +646,18 @@ def api_fota_report_download(filename):
 
 @app.route('/api/sanity-wom/tests', methods=['GET'])
 def api_sanity_wom_tests():
-    """Retorna todos los casos del Sanity Check WOM con resultados actuales."""
+    """Retorna todos los casos del Sanity Check WOM con resultados actuales.
+    Query param opcional: serial — si se provee, los tests 5G se marcan N/A
+    automáticamente cuando el dispositivo no soporta 5G hardware.
+    """
     try:
-        tests = sanity_wom_executor.get_test_cases()
-        return jsonify({'success': True, 'tests': tests})
+        serial = request.args.get('serial', '')
+        supports_5g = True  # por defecto, no limitar
+        if serial and serial in adb_manager.devices:
+            supports_5g = adb_manager.devices[serial].supports_5g
+
+        tests = sanity_wom_executor.get_test_cases(apply_5g_filter=not supports_5g)
+        return jsonify({'success': True, 'tests': tests, 'supports_5g': supports_5g})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

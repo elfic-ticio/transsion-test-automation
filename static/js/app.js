@@ -78,6 +78,9 @@ async function refreshDevices() {
                 const androidVer = device.android_version || '-';
                 const swVer = device.sw_version || '-';
                 const mfr = device.manufacturer ? `${device.manufacturer} ` : '';
+                const cap5gBadge = device.supports_5g
+                    ? `<span class="badge bg-success ms-1" title="Hardware 5G NR compatible"><i class="fas fa-broadcast-tower me-1"></i>5G</span>`
+                    : `<span class="badge bg-secondary ms-1" title="Sin soporte 5G NR">No 5G</span>`;
 
                 // Numero de telefono: mostrar SIM1/SIM2 por separado si hay dual SIM
                 let phoneHtml = '';
@@ -96,7 +99,7 @@ async function refreshDevices() {
                                 <div class="d-flex align-items-center gap-3">
                                     <i class="fas fa-mobile-alt fa-2x text-${opColor}"></i>
                                     <div class="flex-grow-1 min-width-0">
-                                        <div class="fw-bold">${mfr}${device.model || 'Dispositivo desconocido'}</div>
+                                        <div class="fw-bold">${mfr}${device.model || 'Dispositivo desconocido'}${cap5gBadge}</div>
                                         <div class="small text-muted font-monospace">${serial}</div>
                                     </div>
                                     <div class="text-center flex-shrink-0">

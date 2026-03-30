@@ -35,6 +35,7 @@ class Device:
     volte_enabled: bool = False
     vowifi_enabled: bool = False
     airplane_mode: bool = False
+    supports_5g: bool = False
 
     def to_dict(self):
         return asdict(self)
@@ -137,6 +138,7 @@ class ADBManager:
                 self._update_network_info(device)
                 self._update_sim_info(device)
                 self._update_call_features(device)
+                self._detect_5g_capability(device)
 
                 devices.append(device)
                 self.devices[serial] = device
@@ -151,12 +153,23 @@ class ADBManager:
     def _update_network_info(self, device: Device):
         """Actualiza información de red del dispositivo"""
         success, output = self.run_command(
-            "shell dumpsys telephony.registry | grep -E \"mServiceState|mDataNetworkType\"",
+            "shell dumpsys telephony.registry | grep -E \"mServiceState|mDataNetworkType|mVoiceRegState|mDataRegState\"",
             device.serial
         )
 
-        if success:
+        if success and output:
             output_upper = output.upper()
+
+            # Verificar que el dispositivo esté realmente registrado en la red.
+            # mVoiceRegState=0 o mDataRegState=0 significa IN_SERVICE.
+            # Si no hay IN_SERVICE en el output, no hay cobertura real (sin SIM o fuera de red).
+            in_service = 'IN_SERVICE' in output_upper
+
+            if not in_service:
+                device.network_type = ""
+                device.signal_strength = 0
+                return
+
             if 'NR_SA' in output_upper or '5G_SA' in output_upper:
                 device.network_type = "5G SA"
             elif 'NR' in output_upper or 'LTE_NR' in output_upper:
@@ -168,18 +181,78 @@ class ADBManager:
             elif 'GSM' in output_upper or 'EDGE' in output_upper or 'GPRS' in output_upper:
                 device.network_type = "2G"
             else:
-                device.network_type = "Unknown"
+                device.network_type = ""
+        else:
+            device.network_type = ""
+            device.signal_strength = 0
+            return
 
-        # Obtener fuerza de señal
+        # Obtener fuerza de señal solo si está en servicio
         success, output = self.run_command(
             "shell dumpsys telephony.registry | grep mSignalStrength",
             device.serial
         )
         if success:
-            # Extraer valor de señal (simplificado)
             match = re.search(r'signalStrength=(\d+)', output)
             if match:
                 device.signal_strength = int(match.group(1))
+
+    def _detect_5g_capability(self, device: Device):
+        """
+        Detecta si el hardware del dispositivo soporta 5G (NR).
+        Verifica múltiples propiedades del sistema — funciona sin SIM.
+        """
+        serial = device.serial
+
+        # 1) MediaTek: ro.vendor.mtk_nr_support = 1
+        ok, out = self.run_command("shell getprop ro.vendor.mtk_nr_support", serial)
+        if ok and out.strip() == '1':
+            device.supports_5g = True
+            return
+
+        # 2) MediaTek alternativo: ro.config.nr_support
+        ok, out = self.run_command("shell getprop ro.config.nr_support", serial)
+        if ok and out.strip() == '1':
+            device.supports_5g = True
+            return
+
+        # 3) Qualcomm / genérico: persist.vendor.radio.nr_cap
+        ok, out = self.run_command("shell getprop persist.vendor.radio.nr_cap", serial)
+        if ok and out.strip() == '1':
+            device.supports_5g = True
+            return
+
+        # 4) Genérico: ro.config.5g
+        ok, out = self.run_command("shell getprop ro.config.5g", serial)
+        if ok and out.strip() in ('1', 'true', 'yes'):
+            device.supports_5g = True
+            return
+
+        # 5) ro.telephony.default_network — tipo de red preferido.
+        #    Valores ≥20 incluyen NR (NR=20, LTE+NR=22, NR_ONLY=20, etc.)
+        ok, out = self.run_command("shell getprop ro.telephony.default_network", serial)
+        if ok and out.strip():
+            try:
+                # Puede ser "22" (LTE+NR) o "22,22" para dual SIM
+                for val in out.strip().replace(',', ' ').split():
+                    if int(val) >= 20:
+                        device.supports_5g = True
+                        return
+            except ValueError:
+                pass
+
+        # 6) dumpsys telephony — buscar flags NR en capabilities (no requiere SIM)
+        ok, out = self.run_command(
+            "shell dumpsys telephony | grep -iE \"nr_capability|NR_SUPPORTED|NETWORK_TYPE_NR|has5gCapability\"",
+            serial
+        )
+        if ok and out.strip():
+            low = out.lower()
+            if 'true' in low or '= 1' in low or 'nr_capability' in low or 'network_type_nr' in low:
+                device.supports_5g = True
+                return
+
+        device.supports_5g = False
 
     def _update_sim_info(self, device: Device):
         """Actualiza información de SIM"""
@@ -260,6 +333,7 @@ class ADBManager:
         self._update_network_info(device)
         self._update_sim_info(device)
         self._update_call_features(device)
+        self._detect_5g_capability(device)
 
         return device
 

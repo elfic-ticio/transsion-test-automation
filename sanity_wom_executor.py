@@ -779,9 +779,21 @@ class SanityWOMExecutor:
 
     # ---------- API principal ----------
 
-    def get_test_cases(self) -> List[dict]:
+    def get_test_cases(self, apply_5g_filter: bool = False) -> List[dict]:
+        """
+        Retorna todos los test cases como dicts.
+        Si apply_5g_filter=True, los tests de categoría '5g' se marcan como
+        resultado 'na' con observación de que el dispositivo no soporta 5G.
+        """
         with self._lock:
-            return [tc.to_dict() for tc in WOM_TEST_CASES]
+            result = []
+            for tc in WOM_TEST_CASES:
+                d = tc.to_dict()
+                if apply_5g_filter and tc.category == '5g':
+                    d['result'] = 'na'
+                    d['remark'] = 'Dispositivo sin soporte 5G NR — no aplica'
+                result.append(d)
+            return result
 
     def set_result(self, test_id: str, result: str, remark: str = '') -> bool:
         with self._lock:
