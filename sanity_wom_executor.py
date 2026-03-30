@@ -743,6 +743,32 @@ WOM_TEST_CASES = [
 # ==================== EJECUTOR ====================
 
 class SanityWOMExecutor:
+    # Tests que WOM ha descontinuado o que no tienen cobertura masiva.
+    # Se marcan N/A por defecto si el tester no los ha cambiado explícitamente.
+    NA_BY_DEFAULT: frozenset = frozenset({
+        # Buzón de voz — servicio descontinuado en WOM Colombia
+        'wom_41', 'wom_42', 'wom_43', 'wom_44', 'wom_45',
+        # STK — applets no desplegados en SIMs WOM Colombia
+        'wom_60', 'wom_61', 'wom_63', 'wom_64',
+        # 5G NR — sin cobertura masiva (solo nodo de pruebas)
+        'wom_5g_0219', 'wom_5g_0220', 'wom_5g_0221',
+    })
+
+    NA_DEFAULT_REMARKS = {
+        'wom_41': 'Servicio de buzón de voz descontinuado en WOM Colombia',
+        'wom_42': 'Servicio de buzón de voz descontinuado en WOM Colombia',
+        'wom_43': 'Servicio de buzón de voz descontinuado en WOM Colombia',
+        'wom_44': 'Servicio de buzón de voz descontinuado en WOM Colombia',
+        'wom_45': 'Servicio de buzón de voz descontinuado en WOM Colombia',
+        'wom_60': 'STK no desplegado en SIMs WOM Colombia',
+        'wom_61': 'STK no desplegado en SIMs WOM Colombia',
+        'wom_63': 'STK no desplegado en SIMs WOM Colombia',
+        'wom_64': 'STK no desplegado en SIMs WOM Colombia',
+        'wom_5g_0219': 'Sin cobertura 5G NR masiva — solo nodo de pruebas',
+        'wom_5g_0220': 'Sin cobertura 5G NR masiva — solo nodo de pruebas',
+        'wom_5g_0221': 'Sin cobertura 5G NR masiva — solo nodo de pruebas',
+    }
+
     def __init__(self, adb_manager):
         self.adb = adb_manager
         self.tests: Dict[str, WOMTestCase] = {t.id: t for t in WOM_TEST_CASES}
@@ -782,16 +808,26 @@ class SanityWOMExecutor:
     def get_test_cases(self, apply_5g_filter: bool = False) -> List[dict]:
         """
         Retorna todos los test cases como dicts.
-        Si apply_5g_filter=True, los tests de categoría '5g' se marcan como
-        resultado 'na' con observación de que el dispositivo no soporta 5G.
+        - Tests en NA_BY_DEFAULT se marcan N/A automáticamente si el tester
+          no los ha modificado explícitamente (result vacío).
+        - Si apply_5g_filter=True, los tests '5g' también se marcan N/A
+          cuando el dispositivo no tiene hardware 5G.
         """
         with self._lock:
             result = []
             for tc in WOM_TEST_CASES:
                 d = tc.to_dict()
+
+                # Default N/A por política WOM (solo si el tester no lo cambió)
+                if tc.id in self.NA_BY_DEFAULT and not d['result']:
+                    d['result'] = 'na'
+                    d['remark'] = self.NA_DEFAULT_REMARKS.get(tc.id, 'No aplica')
+
+                # N/A adicional si dispositivo sin hardware 5G
                 if apply_5g_filter and tc.category == '5g':
                     d['result'] = 'na'
                     d['remark'] = 'Dispositivo sin soporte 5G NR — no aplica'
+
                 result.append(d)
             return result
 
