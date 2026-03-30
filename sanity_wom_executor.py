@@ -119,38 +119,54 @@ WOM_TEST_CASES = [
     ),
     WOMTestCase(
         "wom_38", "38", "[WOM] [38] Llamada 3G Roaming Nacional", "general",
-        "Verificar llamada de voz en 3G con Roaming Nacional.",
-        "Caso 1)\n1) Seleccion manual de red.\n2) Escanear redes disponibles.\n"
+        "Verificar llamada de voz en 3G con Roaming Nacional (itinerancia entre operadores colombianos).",
+        "Caso 1) Seleccion de Movistar 3G:\n"
+        "1) Ir a Ajustes > Redes moviles > Operador de red > Seleccion manual.\n"
+        "2) Escanear las redes disponibles (WOM, Movistar, Claro, Tigo).\n"
         "3) Seleccionar Movistar 3G.\n"
-        "4) Verificar que el registro en Movistar es exitoso.\n5) Realizar una llamada de voz.",
-        "El dispositivo se registra en red 3G de otro operador y puede realizar llamadas.",
-        "manual"
+        "4) Verificar que el DUT se registra correctamente en Movistar.\n"
+        "5) Realizar una llamada de voz, enviar SMS y navegar datos.\n\n"
+        "Caso 2) Repetir con Movistar 2G.",
+        "El dispositivo puede registrarse en red 3G/2G de Movistar y realizar llamadas y datos.",
+        "semi", "_semi_roaming_scan"
     ),
     WOMTestCase(
         "wom_40", "40", "[WOM] [40] Llamada a Numeros Cortos", "general",
-        "Verificar que el terminal puede marcar numeros de marcacion corta.",
-        "1) Marcar los numeros cortos disponibles en WOM (Linea HID Seguros y otros).\n"
-        "2) Verificar que la llamada conecta correctamente.",
-        "El dispositivo puede marcar y conectar a numeros cortos.",
-        "manual"
+        "Verificar que el terminal puede marcar numeros de marcacion corta de WOM Colombia.",
+        "DUT registrado en VoLTE.\n"
+        "1) Marcar los siguientes numeros cortos:\n"
+        "   - *611 (Atencion al cliente WOM)\n"
+        "   - *222 (Saldo y recargas)\n"
+        "   - 164 (Informacion)\n"
+        "   - 123 (Policia)\n"
+        "   - 112 (Emergencias)\n"
+        "2) Verificar que cada llamada conecta y se ejecuta sobre VoLTE.\n"
+        "3) Registrar el resultado y la tecnologia usada en cada caso.",
+        "Todas las marcaciones se generan sobre VoLTE y conectan correctamente.",
+        "semi", "_semi_numeros_cortos"
     ),
     WOMTestCase(
         "wom_41", "41", "[WOM] [41] Buzon de Voz - Icono de Notificacion", "general",
         "Verificar que el terminal muestra el icono de buzon de voz correctamente.",
-        "Condicion previa: Enviar 3 mensajes de voz al dispositivo.\n"
-        "1) Esperar hasta recibir la notificacion de buzon de voz.\n"
-        "2) Verificar el icono de voicemail en la barra de estado.",
-        "El icono de voicemail aparece cuando hay mensajes pendientes.",
-        "manual"
+        "NOTA: El servicio de buzon de voz puede no estar disponible en WOM Colombia.\n"
+        "Condicion previa: Enviar 3 mensajes de voz al dispositivo sin que sea contestado.\n"
+        "1) Esperar hasta recibir la notificacion de buzon de voz (icono en barra de estado).\n"
+        "2) Apagar y encender el equipo.\n"
+        "3) Verificar que el icono de voicemail sigue apareciendo.\n"
+        "4) Escuchar los mensajes (dejar al menos uno sin escuchar).\n"
+        "5) Verificar que el icono permanece mientras haya mensajes no escuchados.",
+        "El icono de voicemail aparece y desaparece correctamente segun los mensajes pendientes.",
+        "semi", "_semi_voicemail_settings"
     ),
     WOMTestCase(
         "wom_42", "42", "[WOM] [42] Buzon de Voz - Tecla de Acceso Directo", "general",
         "Verificar que el terminal llama al Buzon de Voz mediante acceso directo.",
-        "Realizar llamadas al buzon de voz usando:\n"
-        "1) Manten presionada la tecla 1.\n"
-        "2) Marcar el numero directo del buzon.",
-        "El dispositivo conecta al servicio de buzon de voz.",
-        "manual"
+        "NOTA: El servicio de buzon de voz puede no estar disponible en WOM Colombia.\n"
+        "1) Mantener presionada la tecla '1' en el marcador (acceso rapido al buzon).\n"
+        "2) Verificar que el DUT marca al centro de buzon de voz.\n"
+        "3) Tambien probar marcando directamente el numero del buzon de voz.",
+        "El dispositivo conecta al servicio de buzon de voz por ambos metodos.",
+        "semi", "_semi_voicemail_dial"
     ),
     WOMTestCase(
         "wom_43", "43", "[WOM] [43] Buzon de Voz - Recepcion de Mensaje", "general",
@@ -220,13 +236,25 @@ WOM_TEST_CASES = [
     ),
     WOMTestCase(
         "wom_83", "83", "[WOM] [83] Revision de Throughput (Descarga / Carga)", "general",
-        "Verificar el comportamiento correcto del terminal en Uplink y Downlink.",
+        "Verificar el comportamiento correcto del terminal en Uplink y Downlink con LTE conectado.",
+        "Con LTE conectado (sin Wi-Fi):\n"
+        "1) Iniciar descarga HTTP de un archivo grande (100 MB).\n"
+        "2) Iniciar carga simultanea de un archivo (70 MB).\n"
+        "3) Comparar las velocidades DL y UL obtenidas con un dispositivo de referencia.\n"
+        "Anotar velocidades en el campo de observaciones.",
+        "Las velocidades de descarga y carga son mayores o similares a las del dispositivo de referencia.",
+        "semi", "_semi_throughput"
+    ),
+    WOMTestCase(
+        "wom_85", "85", "[WOM] [85] Busqueda de Red LTE", "general",
+        "Verificar que el terminal puede buscar y registrarse correctamente en la red LTE.",
         "Con LTE conectado:\n"
-        "1) Iniciar descarga de un archivo grande (100MB) via HTTP.\n"
-        "2) Iniciar carga de un archivo.\n"
-        "3) Verificar las velocidades obtenidas.",
-        "Las velocidades de descarga y carga son aceptables para LTE.",
-        "manual"
+        "1) Ir a Ajustes > Redes moviles > Busqueda manual de red.\n"
+        "2) Seleccionar la misma red LTE a la que ya esta conectado el DUT.\n"
+        "3) Cuando el dispositivo regrese automaticamente a los ajustes, seleccionar 'Seleccion automatica'.\n"
+        "4) Verificar el icono RAT en la parte superior de la pantalla.",
+        "El dispositivo muestra el icono LTE/4G correcto tras la busqueda manual y seleccion de red.",
+        "semi", "_semi_lte_scan"
     ),
     WOMTestCase(
         "wom_86", "86", "[WOM] [86] Prueba de Tethering", "general",
@@ -395,24 +423,27 @@ WOM_TEST_CASES = [
     ),
     WOMTestCase(
         "wom_volte_0039", "FT_VoLTE_0039", "[WOM] [FT_VoLTE_0039] Llamada en Espera (CW) - Configuracion Terminal", "volte",
-        "Para Llamada en Espera basada en el terminal, la operacion es gestionada por el terminal.",
-        "1) En el DUT, desactivar la Llamada en Espera (CW).\n"
-        "2) Consultar el estado de CW en el DUT.\n"
-        "3) Activar CW en el DUT.\n"
-        "4) Volver a consultar el estado.\n"
-        "5) Realizar una llamada mientras el DUT esta ocupado con otra llamada.",
-        "La Llamada en Espera puede activarse/desactivarse desde el terminal y funciona correctamente.",
-        "manual"
+        "Verificar la activacion y desactivacion de Llamada en Espera gestionada por el terminal (sin senalizacion de red).",
+        "1) En el DUT, desactivar la Llamada en Espera (CW) desde Ajustes de llamada.\n"
+        "2) Consultar el estado de CW: verificar que indica 'desactivada'.\n"
+        "3) Confirmar que no se envio senalizacion Ut/XCAP a la red.\n"
+        "4) Activar CW desde el DUT.\n"
+        "5) Consultar el estado: verificar que indica 'activada'.\n"
+        "6) Con una llamada activa, recibir una segunda llamada y verificar la notificacion de CW.",
+        "La Llamada en Espera se activa/desactiva desde el terminal sin senalizacion de red y funciona correctamente.",
+        "semi", "_semi_call_waiting_toggle"
     ),
     WOMTestCase(
-        "wom_volte_0040", "FT_VoLTE_0040", "[WOM] [FT_VoLTE_0040] Llamada en Espera (CW) - Configuracion de Red", "volte",
-        "Para Llamada en Espera basada en red, la operacion es gestionada por la red via Ut/XCAP.",
-        "1) En el DUT, desactivar CW via red.\n"
-        "2) Consultar el estado de CW.\n"
-        "3) Activar CW via red.\n"
-        "4) Verificar el escenario de llamada en espera.",
-        "La configuracion de CW funciona via red (Ut/XCAP) y la llamada en espera opera correctamente.",
-        "manual"
+        "wom_volte_0040", "FT_VoLTE_0040", "[WOM] [FT_VoLTE_0040] Llamada en Espera (CW) - Configuracion de Red (Ut/XCAP)", "volte",
+        "Verificar la activacion y desactivacion de Llamada en Espera gestionada por la red via Ut/XCAP.",
+        "1) En el DUT, desactivar CW via configuracion de red (Ut/XCAP).\n"
+        "2) Confirmar que el DUT envio la solicitud Ut/XCAP a la red.\n"
+        "3) Consultar el estado: verificar que indica 'desactivada'.\n"
+        "4) Activar CW via configuracion de red.\n"
+        "5) Confirmar que el DUT envio la solicitud Ut/XCAP.\n"
+        "6) Con una llamada activa, recibir una segunda llamada y verificar el comportamiento de CW.",
+        "La configuracion de CW via red (Ut/XCAP) funciona correctamente y la llamada en espera opera segun lo esperado.",
+        "semi", "_semi_call_waiting_toggle"
     ),
     WOMTestCase(
         "wom_volte_0048", "FT_VoLTE_0048", "[WOM] [FT_VoLTE_0048] Llamada en Espera - Iniciada desde DUT", "volte",
@@ -607,22 +638,28 @@ WOM_TEST_CASES = [
     ),
     WOMTestCase(
         "wom_vowifi_0157", "FT_VoWIFI_00157", "[WOM] [FT_VoWIFI_00157] Llamada Saliente WiFi con Caida a CSFB", "vowifi",
-        "Verificar llamada saliente WiFi con caida a CSFB.",
+        "Verificar llamada saliente WiFi con traspaso (handover) a CSFB.",
         "1) Activar WiFi Calling en el DUT.\n"
-        "2) Iniciar llamada WiFi hacia la Parte B (CSFB).\n"
-        "3) Verificar el comportamiento del traspaso.",
-        "La llamada WiFi con caida a CSFB funciona correctamente.",
-        "manual"
+        "2) Iniciar llamada WiFi desde el DUT hacia la Parte B (cliente CSFB).\n"
+        "3) Contestar la llamada en la Parte B.\n"
+        "4) Verificar que la llamada se establece como WiFi en el DUT.\n"
+        "5) Verificar la calidad de audio en ambas direcciones.\n"
+        "6) Finalizar la llamada desde cualquiera de las dos partes.",
+        "La llamada VoWiFi hacia cliente CSFB se establece correctamente con buena calidad de audio.",
+        "semi", "_semi_vowifi_mo_csfb"
     ),
     WOMTestCase(
-        "wom_vowifi_0158", "FT_VoWIFI_00158", "[WOM] [FT_VoWIFI_00158] Llamadas MO y MT entre WiFi y PSTN", "vowifi",
-        "Verificar llamadas salientes y entrantes entre WiFi y PSTN (linea fija).",
+        "wom_vowifi_0158", "FT_VoWIFI_00158", "[WOM] [FT_VoWIFI_00158] Llamadas MO y MT entre WiFi y PSTN (Linea Fija)", "vowifi",
+        "Verificar llamadas salientes (MO) y entrantes (MT) entre WiFi Calling y PSTN (linea fija).",
         "1) Activar WiFi Calling en el DUT.\n"
-        "2) Llamar a linea fija desde el DUT.\n"
-        "3) Contestar en la linea fija.\n"
-        "4) Tambien probar: recibir llamada desde linea fija en el DUT via WiFi.",
-        "Las llamadas MO y MT entre WiFi y PSTN funcionan correctamente.",
-        "manual"
+        "2) Llamada MO: marcar un numero de linea fija desde el DUT.\n"
+        "3) Contestar en la linea fija y verificar la calidad.\n"
+        "4) Finalizar la llamada.\n"
+        "5) Llamada MT: desde la linea fija, llamar al numero del DUT.\n"
+        "6) Contestar en el DUT y verificar que la llamada llega via WiFi.\n"
+        "7) Verificar la calidad de audio.",
+        "Las llamadas MO y MT entre WiFi Calling y PSTN funcionan correctamente con buena calidad.",
+        "semi", "_semi_vowifi_pstn_call"
     ),
     WOMTestCase(
         "wom_vowifi_0159", "FT_VoWIFI_00159", "[WOM] [FT_VoWIFI_00159] Llamada Entrante VoLTE a WiFi", "vowifi",
@@ -636,29 +673,39 @@ WOM_TEST_CASES = [
     WOMTestCase(
         "wom_vowifi_0160", "FT_VoWIFI_00160", "[WOM] [FT_VoWIFI_00160] Llamada Entrante CSFB a WiFi", "vowifi",
         "Verificar llamada entrante desde CSFB hacia un DUT registrado en WiFi Calling.",
-        "1) Activar WiFi Calling en el DUT.\n"
-        "2) La Parte B inicia una llamada CSFB hacia el DUT.\n"
-        "3) Contestar en el DUT.",
-        "La llamada entrante desde CSFB hacia el DUT registrado en WiFi funciona correctamente.",
-        "manual"
+        "1) Activar WiFi Calling en el DUT y verificar el registro IMS via WiFi.\n"
+        "2) La Parte B inicia una llamada CSFB hacia el numero del DUT.\n"
+        "3) Contestar en el DUT.\n"
+        "4) Verificar que la interfaz del DUT indica que la llamada es via WiFi.\n"
+        "5) Verificar la calidad de audio.\n"
+        "6) Finalizar la llamada.",
+        "La llamada entrante desde CSFB hacia el DUT registrado en WiFi se establece correctamente.",
+        "semi", "_semi_vowifi_mt_csfb"
     ),
     WOMTestCase(
         "wom_vowifi_0179", "FT_VoWIFI_00179", "[WOM] [FT_VoWIFI_00179] Llamada de Emergencia en Modo Avion con WiFi", "vowifi",
-        "Verificar llamada de emergencia en Modo Avion con cobertura WiFi disponible.",
-        "Condiciones previas: El DUT esta en modo avion pero registrado en IMS via VoWiFi.\n"
-        "1) Realizar llamada de emergencia (112).\n"
-        "2) Verificar que la llamada de emergencia conecta via WiFi.",
-        "La llamada de emergencia conecta via WiFi incluso en modo avion.",
-        "manual"
+        "Verificar llamada de emergencia cuando el DUT esta en Modo Avion con cobertura WiFi.",
+        "Condiciones previas: El DUT esta en modo avion pero registrado en IMS via VoWiFi activo.\n"
+        "1) Confirmar que el DUT esta en modo avion y registrado en IMS via WiFi.\n"
+        "2) Realizar llamada de emergencia (112 o 911).\n"
+        "3) Verificar que la llamada conecta via WiFi.\n"
+        "4) Colgar inmediatamente.\n"
+        "NOTA: Algunos operadores no soportan emergencias via VoWiFi; "
+        "el DUT puede desactivar el modo avion automaticamente y usar VoLTE o CSFB.",
+        "La llamada de emergencia conecta via la mejor ruta disponible (WiFi, VoLTE o CS).",
+        "semi", "_semi_emergency_vowifi"
     ),
     WOMTestCase(
-        "wom_vowifi_0180", "FT_VoWIFI_00180", "[WOM] [FT_VoWIFI_00180] Llamada de Emergencia en 4G HPLMN y WiFi", "vowifi",
-        "Verificar llamada de emergencia con cobertura 4G HPLMN y WiFi disponible simultaneamente.",
-        "Condiciones previas: El DUT esta conectado a la red 4G HPLMN y tambien registrado en IMS via VoWiFi.\n"
-        "1) Realizar llamada de emergencia.\n"
-        "2) Verificar que ruta se utiliza (VoLTE o WiFi).",
-        "La llamada de emergencia conecta correctamente cuando hay cobertura 4G y WiFi disponibles.",
-        "manual"
+        "wom_vowifi_0180", "FT_VoWIFI_00180", "[WOM] [FT_VoWIFI_00180] Llamada de Emergencia con 4G HPLMN y WiFi", "vowifi",
+        "Verificar llamada de emergencia cuando el DUT tiene cobertura 4G HPLMN y WiFi activos simultaneamente.",
+        "Condiciones previas: El DUT esta conectado a la red 4G HPLMN y registrado en IMS via VoWiFi.\n"
+        "1) Confirmar que el DUT tiene 4G activo y WiFi Calling registrado.\n"
+        "2) Realizar llamada de emergencia (112 o 911).\n"
+        "3) Observar la ruta utilizada: VoLTE, WiFi o CSFB.\n"
+        "4) Colgar inmediatamente.\n"
+        "NOTA: Verificar en el log si aplica, si la llamada fue correcta segun los requisitos del operador.",
+        "La llamada de emergencia conecta correctamente usando la ruta adecuada segun la configuracion del operador.",
+        "semi", "_semi_emergency_vowifi"
     ),
 
     # ---- 5G NR NSA ----
@@ -1349,6 +1396,202 @@ class SanityWOMExecutor:
             return {
                 'success': True,
                 'message': 'Speedtest abierto. Iniciar una descarga y luego realizar una llamada VoLTE. Verificar que datos 5G y voz VoLTE funcionan en paralelo.'
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_roaming_scan(self, serial: str) -> dict:
+        """Abre seleccion manual de red para prueba de Roaming Nacional 3G."""
+        try:
+            net_type = self._adb(serial, 'shell getprop gsm.network.type').strip()
+            operator = self._adb(serial, 'shell getprop gsm.operator.alpha').strip()
+            self._adb(serial, 'shell am start -a android.settings.NETWORK_OPERATOR_SETTINGS')
+            return {
+                'success': True,
+                'message': (f"Red actual: {operator or 'desconocida'} ({net_type or '-'}).\n\n"
+                            "Pantalla de seleccion de red abierta.\n"
+                            "Pasos a seguir:\n"
+                            "1) Cambiar a seleccion MANUAL.\n"
+                            "2) Esperar el escaneo de redes disponibles.\n"
+                            "3) Seleccionar Movistar 3G.\n"
+                            "4) Verificar registro exitoso y realizar llamada de voz.\n"
+                            "5) Repetir con Movistar 2G.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_numeros_cortos(self, serial: str) -> dict:
+        """Abre el marcador con instrucciones para probar numeros cortos de WOM."""
+        try:
+            self._adb(serial, 'shell am start -a android.intent.action.DIAL')
+            return {
+                'success': True,
+                'message': ("Marcador abierto. DUT debe estar registrado en VoLTE.\n\n"
+                            "Marcar los siguientes numeros cortos y verificar que cada llamada conecta sobre VoLTE:\n"
+                            "  *611  — Atencion al cliente WOM\n"
+                            "  *222  — Saldo y recargas\n"
+                            "  164   — Informacion\n"
+                            "  123   — Policia Nacional\n"
+                            "  112   — Numero de emergencias\n\n"
+                            "Verificar el icono VoLTE activo durante cada llamada.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_voicemail_settings(self, serial: str) -> dict:
+        """Abre la configuracion de buzon de voz."""
+        try:
+            self._adb(serial, 'shell am start -a android.intent.action.DIAL')
+            return {
+                'success': True,
+                'message': ("NOTA: El buzon de voz puede no estar disponible en WOM Colombia.\n\n"
+                            "Marcador abierto. Para acceder a la configuracion del buzon de voz:\n"
+                            "1) Ir a Menu > Ajustes > Buzon de voz.\n"
+                            "2) Verificar que el numero del buzon esta configurado.\n"
+                            "3) Si el servicio no esta disponible, marcar el resultado como N/A.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_voicemail_dial(self, serial: str) -> dict:
+        """Marca el numero de acceso al buzon de voz (*86)."""
+        try:
+            self._adb(serial, 'shell am start -a android.intent.action.CALL -d tel:%2A86')
+            return {
+                'success': True,
+                'message': ("NOTA: El buzon de voz puede no estar disponible en WOM Colombia.\n\n"
+                            "Marcando *86 (acceso rapido al buzon de voz).\n"
+                            "Verificar que el DUT conecta al centro de buzon de voz.\n"
+                            "Alternativa: Mantener presionada la tecla '1' en el marcador.\n"
+                            "Si el servicio no esta disponible, marcar el resultado como N/A.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_throughput(self, serial: str) -> dict:
+        """Abre fast.com para prueba de throughput DL/UL."""
+        try:
+            net_type = self._adb(serial, 'shell getprop gsm.network.type').strip()
+            self._adb(serial, 'shell am start -a android.intent.action.VIEW -d https://fast.com')
+            return {
+                'success': True,
+                'message': (f"Red actual: {net_type or 'desconocida'}.\n\n"
+                            "fast.com abierto para prueba de velocidad.\n"
+                            "Pasos a seguir:\n"
+                            "1) Verificar que el Wi-Fi esta DESACTIVADO.\n"
+                            "2) Ejecutar la prueba de descarga.\n"
+                            "3) Activar 'Mostrar mas info' para ver la velocidad de carga.\n"
+                            "4) Anotar los valores DL y UL en el campo de observaciones.\n"
+                            "5) Comparar con un dispositivo de referencia.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_lte_scan(self, serial: str) -> dict:
+        """Abre busqueda manual de red para verificar registro LTE."""
+        try:
+            net_type = self._adb(serial, 'shell getprop gsm.network.type').strip()
+            operator = self._adb(serial, 'shell getprop gsm.operator.alpha').strip()
+            self._adb(serial, 'shell am start -a android.settings.NETWORK_OPERATOR_SETTINGS')
+            return {
+                'success': True,
+                'message': (f"Red actual: {operator or 'desconocida'} ({net_type or '-'}).\n\n"
+                            "Pantalla de seleccion de red abierta.\n"
+                            "Pasos a seguir:\n"
+                            "1) Cambiar a busqueda MANUAL.\n"
+                            "2) Seleccionar WOM LTE (la misma red a la que ya estaba conectado).\n"
+                            "3) Cuando regrese a ajustes, seleccionar 'Seleccion automatica'.\n"
+                            "4) Verificar que el icono 4G/LTE aparece en la barra de estado.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_call_waiting_toggle(self, serial: str) -> dict:
+        """Abre los ajustes de llamada para configurar Llamada en Espera (CW)."""
+        try:
+            self._adb(serial, 'shell am start -a android.intent.action.MAIN '
+                              '-n com.android.phone/.settings.CallFeaturesSetting')
+            return {
+                'success': True,
+                'message': ("Ajustes de llamada abiertos.\n\n"
+                            "Pasos a seguir:\n"
+                            "1) Ir a 'Llamada en espera' o 'Call Waiting'.\n"
+                            "2) Desactivar la opcion y verificar el estado.\n"
+                            "3) Volver a activar la opcion.\n"
+                            "4) Con una llamada activa, recibir una segunda llamada "
+                            "y verificar la notificacion de llamada en espera.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_vowifi_mo_csfb(self, serial: str) -> dict:
+        """Abre WiFi Calling y el marcador para llamada WiFi hacia cliente CSFB."""
+        try:
+            self._adb(serial, 'shell am start -a android.settings.WIFI_CALLING_SETTINGS')
+            return {
+                'success': True,
+                'message': ("Ajustes de WiFi Calling abiertos.\n\n"
+                            "Pasos a seguir:\n"
+                            "1) Confirmar que WiFi Calling esta ACTIVADO.\n"
+                            "2) Volver al marcador y llamar a un numero CSFB (cliente en red CS).\n"
+                            "3) Verificar que la llamada se establece via WiFi en el DUT.\n"
+                            "4) Verificar la calidad de audio.\n"
+                            "5) Finalizar la llamada.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_vowifi_pstn_call(self, serial: str) -> dict:
+        """Abre el marcador para llamada WiFi hacia linea fija PSTN."""
+        try:
+            self._adb(serial, 'shell am start -a android.intent.action.DIAL')
+            return {
+                'success': True,
+                'message': ("Marcador abierto. Verificar que WiFi Calling esta activo.\n\n"
+                            "Prueba MO (saliente):\n"
+                            "1) Marcar un numero de linea fija.\n"
+                            "2) Verificar que la llamada va via WiFi y la calidad es buena.\n"
+                            "3) Colgar.\n\n"
+                            "Prueba MT (entrante):\n"
+                            "4) Solicitar que le llamen desde la linea fija.\n"
+                            "5) Contestar en el DUT y verificar que llega via WiFi.\n"
+                            "6) Verificar la calidad de audio.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_vowifi_mt_csfb(self, serial: str) -> dict:
+        """Prepara el DUT para recibir llamada CSFB con WiFi Calling activo."""
+        try:
+            self._adb(serial, 'shell am start -a android.settings.WIFI_CALLING_SETTINGS')
+            return {
+                'success': True,
+                'message': ("Ajustes de WiFi Calling abiertos.\n\n"
+                            "Pasos a seguir:\n"
+                            "1) Confirmar que WiFi Calling esta ACTIVADO.\n"
+                            "2) Solicitar a la Parte B que realice una llamada CSFB al numero del DUT.\n"
+                            "3) Contestar la llamada en el DUT.\n"
+                            "4) Verificar que la UI indica que la llamada es via WiFi.\n"
+                            "5) Verificar la calidad de audio.")
+            }
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _semi_emergency_vowifi(self, serial: str) -> dict:
+        """Abre el marcador con 112 para prueba de emergencia via WiFi."""
+        try:
+            wifi_state = self._adb(serial, 'shell dumpsys wifi | grep "mNetworkInfo"').strip()
+            self._adb(serial, 'shell am start -a android.intent.action.DIAL -d tel:112')
+            return {
+                'success': True,
+                'message': ("Estado WiFi: " + (wifi_state[:100] if wifi_state else "desconocido") + "\n\n"
+                            "Marcador abierto con 112 pre-marcado.\n\n"
+                            "Pasos a seguir:\n"
+                            "1) Confirmar que WiFi Calling esta activo y registrado en IMS.\n"
+                            "2) Presionar LLAMAR para iniciar la emergencia.\n"
+                            "3) COLGAR INMEDIATAMENTE.\n"
+                            "4) Verificar la ruta utilizada: WiFi, VoLTE o CSFB.\n\n"
+                            "ADVERTENCIA: Solo realizar si es un ambiente de prueba controlado.")
             }
         except Exception as e:
             return {'success': False, 'message': str(e)}
