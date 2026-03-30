@@ -150,52 +150,90 @@ class ADBManager:
         success, output = self.run_command(f"shell getprop {prop}", serial)
         return output if success else "Unknown"
 
+    # Mapeo de TelephonyManager.NETWORK_TYPE_* (entero) → nombre legible
+    _NETWORK_TYPE_MAP = {
+        1:  "2G",   # GPRS
+        2:  "2G",   # EDGE
+        3:  "3G",   # UMTS
+        4:  "3G",   # CDMA
+        5:  "3G",   # EVDO_0
+        6:  "3G",   # EVDO_A
+        7:  "2G",   # 1xRTT
+        8:  "3G",   # HSDPA
+        9:  "3G",   # HSUPA
+        10: "3G",   # HSPA
+        11: "2G",   # iDEN
+        12: "3G",   # EVDO_B
+        13: "LTE",  # LTE
+        14: "3G",   # eHRPD
+        15: "3G",   # HSPAP
+        16: "2G",   # GSM
+        17: "3G",   # TD-SCDMA
+        18: "LTE",  # IWLAN
+        19: "LTE",  # LTE_CA
+        20: "5G",   # NR (5G SA o dato NR puro)
+    }
+
     def _update_network_info(self, device: Device):
-        """Actualiza información de red del dispositivo"""
+        """
+        Actualiza la red actual del dispositivo.
+        Usa mDataNetworkType (entero) para determinar el tipo exacto.
+        Para 5G NSA: el dispositivo reporta LTE (13/19) pero mNrState=3 (CONNECTED).
+        """
         success, output = self.run_command(
-            "shell dumpsys telephony.registry | grep -E \"mServiceState|mDataNetworkType|mVoiceRegState|mDataRegState\"",
+            "shell dumpsys telephony.registry | grep -E "
+            "\"mDataNetworkType|mVoiceRegState|mDataRegState|mNrState|mServiceState\"",
             device.serial
         )
 
-        if success and output:
-            output_upper = output.upper()
-
-            # Verificar que el dispositivo esté realmente registrado en la red.
-            # mVoiceRegState=0 o mDataRegState=0 significa IN_SERVICE.
-            # Si no hay IN_SERVICE en el output, no hay cobertura real (sin SIM o fuera de red).
-            in_service = 'IN_SERVICE' in output_upper
-
-            if not in_service:
-                device.network_type = ""
-                device.signal_strength = 0
-                return
-
-            if 'NR_SA' in output_upper or '5G_SA' in output_upper:
-                device.network_type = "5G SA"
-            elif 'NR' in output_upper or 'LTE_NR' in output_upper:
-                device.network_type = "5G NSA"
-            elif 'LTE' in output_upper:
-                device.network_type = "LTE"
-            elif 'UMTS' in output_upper or 'HSPA' in output_upper or 'HSDPA' in output_upper:
-                device.network_type = "3G"
-            elif 'GSM' in output_upper or 'EDGE' in output_upper or 'GPRS' in output_upper:
-                device.network_type = "2G"
-            else:
-                device.network_type = ""
-        else:
+        if not success or not output:
             device.network_type = ""
             device.signal_strength = 0
             return
 
-        # Obtener fuerza de señal solo si está en servicio
-        success, output = self.run_command(
+        # ── 1. Verificar que haya cobertura real (IN_SERVICE) ──────────────
+        if 'IN_SERVICE' not in output.upper():
+            device.network_type = ""
+            device.signal_strength = 0
+            return
+
+        # ── 2. Leer mDataNetworkType como entero ───────────────────────────
+        #   El campo puede aparecer varias veces (una por slot SIM).
+        #   Tomamos el primero que no sea 0 (UNKNOWN).
+        data_type_int = 0
+        for m in re.finditer(r'mDataNetworkType\s*=\s*(\d+)', output):
+            val = int(m.group(1))
+            if val != 0:
+                data_type_int = val
+                break
+
+        # ── 3. Leer mNrState: 3 = NR_STATE_CONNECTED (5G NSA activo) ──────
+        nr_state = 0
+        m = re.search(r'mNrState\s*=\s*(\d+)', output)
+        if m:
+            nr_state = int(m.group(1))
+
+        # ── 4. Determinar tipo de red ──────────────────────────────────────
+        if data_type_int == 20:
+            # NR puro (5G SA) — el data type ya es NR
+            device.network_type = "5G SA"
+        elif data_type_int in (13, 19) and nr_state == 3:
+            # LTE o LTE_CA con NR conectado en paralelo → 5G NSA real
+            device.network_type = "5G NSA"
+        elif data_type_int in self._NETWORK_TYPE_MAP:
+            device.network_type = self._NETWORK_TYPE_MAP[data_type_int]
+        else:
+            device.network_type = ""
+
+        # ── 5. Fuerza de señal ─────────────────────────────────────────────
+        success, sig_out = self.run_command(
             "shell dumpsys telephony.registry | grep mSignalStrength",
             device.serial
         )
         if success:
-            match = re.search(r'signalStrength=(\d+)', output)
-            if match:
-                device.signal_strength = int(match.group(1))
+            m = re.search(r'signalStrength=(\d+)', sig_out)
+            if m:
+                device.signal_strength = int(m.group(1))
 
     def _detect_5g_capability(self, device: Device):
         """
